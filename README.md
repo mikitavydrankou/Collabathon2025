@@ -30,3 +30,13 @@ DB connected: PostgreSQL 17.7 (Debian 17.7-3.pgdg13+1) on x86_64-pc-linux-gnu, c
 Access API:
 - http://localhost:8000/
 - http://localhost:8000/docs
+
+Access DB:
+- http://localhost:8081
+
+Other:
+
+Kill process:
+```
+lsof -ti:8000 | xargs kill -9
+```
