@@ -71,68 +71,87 @@ def is_bankNumber_valid(db: Session, user_id: int, bank_number: str):
         
     return {"valid": True, "suggestion": None}
 
-## First name validation
+## Full name validation
 
-def is_name_valid(db: Session, sender_user_id: int, receiver_bank_number: str, name: str):
+def is_fullname_valid(db: Session, sender_user_id: int, receiver_bank_number: str, fullname: str):
+    """
+    Validates if a given full name matches historical receiver names
+    for the specified receiver bank number.
+    """
+
+    # 1. Find receiver user by bank number
     receiver_user = db.query(User).filter(User.bank_number == receiver_bank_number).first()
 
+    # If bank number not found → new receiver → valid
     if not receiver_user:
         return {"valid": True, "suggestion": None}
 
-    user_transactions = db.query(Transaction)\
-        .filter(Transaction.sender_id == sender_user_id,
-                Transaction.receiver_id == receiver_user.user_id)\
-        .all()
+    # 2. Get previous transactions between same sender → receiver
+    user_transactions = (
+        db.query(Transaction)
+            .filter(
+                Transaction.sender_id == sender_user_id,
+                Transaction.receiver_id == receiver_user.user_id
+            )
+            .all()
+    )
 
+    # No previous transactions → new receiver → valid
     if not user_transactions:
         return {"valid": True, "suggestion": None}
 
-    previous_names = [tx.receiver_name for tx in user_transactions if tx.receiver_name]
+    # 3. Extract previous first and last names
+    previous_firstnames = [
+        tx.receiver_name.strip() for tx in user_transactions if tx.receiver_name
+    ]
+    previous_lastnames = [
+        tx.receiver_surname.strip() for tx in user_transactions if tx.receiver_surname
+    ]
 
-    for prev_name in previous_names:
-        if prev_name.strip().lower() == name.strip().lower():
-            return {"valid": True, "suggestion": None}
+    # 4. Split the input
+    parts = fullname.split()
+    if len(parts) < 2:
+        return {"valid": False, "suggestion": f"{previous_firstnames[0]} {previous_lastnames[0]}"}
 
-    return {"valid": False, "suggestion": previous_names[0]}
+    first_name, last_name = parts[0].strip(), " ".join(parts[1:]).strip()
 
-## Surname validation
+    # Helper to normalize comparison
+    def norm(s): return s.strip().lower()
 
-def is_surname_valid(db: Session, sender_user_id: int, receiver_bank_number: str, surname: str):
-    receiver_user = db.query(User).filter(User.bank_number == receiver_bank_number).first()
+    # 5. Check normal order: First Last
+    normal_first_ok = any(norm(fn) == norm(first_name) for fn in previous_firstnames)
+    normal_last_ok = any(norm(ln) == norm(last_name) for ln in previous_lastnames)
 
-    if not receiver_user:
+    # 6. Check swapped order: Last First
+    swapped_first_ok = any(norm(fn) == norm(last_name) for fn in previous_firstnames)
+    swapped_last_ok = any(norm(ln) == norm(first_name) for ln in previous_lastnames)
+
+    # 7. If either normal matches OR swapped matches → OK
+    normal_valid = normal_first_ok and normal_last_ok
+    swapped_valid = swapped_first_ok and swapped_last_ok
+
+    if normal_valid or swapped_valid:
         return {"valid": True, "suggestion": None}
 
-    user_transactions = db.query(Transaction)\
-        .filter(Transaction.sender_id == sender_user_id,
-                Transaction.receiver_id == receiver_user.user_id)\
-        .all()
+    # 8. If invalid → suggest correct name
+    suggestion = f"{previous_firstnames[0]} {previous_lastnames[0]}"
 
-    if not user_transactions:
-        return {"valid": True, "suggestion": None}
-
-    previous_surnames = [tx.receiver_surname for tx in user_transactions if tx.receiver_surname]
-    
-    for prev_surname in previous_surnames:
-        if prev_surname.strip().lower() == surname.strip().lower():
-            return {"valid": True, "suggestion": None}
-
-    return {"valid": False, "suggestion": previous_surnames[0]}
+    return {"valid": False, "suggestion": suggestion}
 
 
-if __name__ == "__main__":
-    # Initialize database and seed if needed
-    from backend.db import init_db
-    from backend.seed import seed_database
-    
-    print("Initializing database...")
-    init_db()
-    seed_database()
+#if __name__ == "__main__":
+#    # Initialize database and seed if needed
+#    from backend.db import init_db
+#    from backend.seed import seed_database
+#    
+#    print("Initializing database...")
+#    init_db()
+#    seed_database()
     
     # Test the function
-    db = SessionLocal()
-    try:
-        result = is_surname_valid(db, 1, "4276555511112222", "Brown")
-        print(f"Result: {result}")
-    finally:
-        db.close()
+#    db = SessionLocal()
+#    try:
+#        result = is_bankNumber_valid(db, 1, "4276555311412423")
+#        print(f"Result: {result}")
+#    finally:
+#        db.close()
