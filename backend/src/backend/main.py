@@ -1,5 +1,6 @@
 from fastapi import FastAPI
-from backend.src.shared import init_db, test_connection
+
+from backend.db import init_db, test_connection
 from backend.seed import seed_database
 
 app = FastAPI()
