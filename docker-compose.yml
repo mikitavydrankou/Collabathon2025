@@ -1,28 +1,28 @@
 services:
-  db:
-    image: postgres:17
-    environment:
-      POSTGRES_DB: ${DATABASE_NAME}
-      POSTGRES_USER: ${DATABASE_USERNAME}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    env_file:
-      - .env
+    db:
+        image: postgres:17
+        environment:
+            POSTGRES_DB: ${DATABASE_NAME}
+            POSTGRES_USER: ${DATABASE_USERNAME}
+            POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+        ports:
+            - "5433:5432"
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+        env_file:
+            - .env
 
-  pgweb:
-    image: sosedoff/pgweb
-    restart: always
-    ports:
-      - "8080:8081"
-    environment:
-      - DATABASE_URL=postgres://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@db:5432/${DATABASE_NAME}?sslmode=disable
-    depends_on:
-      - db
-    env_file:
-      - .env
+    pgweb:
+        image: sosedoff/pgweb
+        restart: always
+        ports:
+            - "8080:8081"
+        environment:
+            - DATABASE_URL=postgres://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@db:5432/${DATABASE_NAME}?sslmode=disable
+        depends_on:
+            - db
+        env_file:
+            - .env
 
 volumes:
-  postgres_data:
+    postgres_data:

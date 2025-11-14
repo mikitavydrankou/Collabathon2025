@@ -1,10 +1,7 @@
-from dotenv import load_dotenv
 from fastapi import FastAPI
 
 from backend.db import init_db, test_connection
 from backend.seed import seed_database
-
-load_dotenv()
 
 app = FastAPI()
 
