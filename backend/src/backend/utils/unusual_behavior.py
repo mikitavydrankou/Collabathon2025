@@ -1,12 +1,8 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
-<<<<<<< Updated upstream
 from backend.src.shared.models.user import User
 from backend.src.shared.models.transaction import Transaction
 from backend.models import SessionLocal
-=======
-from backend.models import Transaction, User, SessionLocal
->>>>>>> Stashed changes
 import numpy as np
 
 ## Take all historical transactions for a specific user
