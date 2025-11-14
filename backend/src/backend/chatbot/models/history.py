@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date as Date
 
 from pydantic import BaseModel, Field
 
@@ -12,7 +12,7 @@ class TransactionRecord(BaseModel):
     Single historical transaction record returned by MCP.
     """
 
-    date: date = Field(..., description="Execution date of the transaction.")
+    date: Date = Field(..., description="Execution date of the transaction.")
     recipient_name: str
     recipient_iban: str
     amount: float
