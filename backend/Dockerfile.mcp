@@ -1,0 +1,30 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy pyproject.toml and install dependencies
+COPY pyproject.toml ./
+RUN pip install --no-cache-dir poetry && \
+    poetry config virtualenvs.create false && \
+    poetry install --no-dev --no-interaction --no-ansi
+
+# Copy application code
+COPY src/ /app/src/
+
+# Set Python path
+ENV PYTHONPATH=/app/src
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+
+# Expose port 8001 for MCP server
+EXPOSE 8001
+
+# Run the MCP FastAPI server
+CMD ["uvicorn", "mcp_server.app:app", "--host", "0.0.0.0", "--port", "8001"]
