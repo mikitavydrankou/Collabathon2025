@@ -20,7 +20,7 @@ poetry install
 poetry run dev
 ```
 
-5. Check if database works in log output!
+5. Check if database works via http://localhost:8000/health
 
 ---
 
@@ -29,7 +29,7 @@ Access API:
 - http://localhost:8000/docs
 
 Access DB:
-- http://localhost:8081
+- http://localhost:8080
 
 ---
 
