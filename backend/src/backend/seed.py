@@ -1,6 +1,7 @@
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 
+from backend.auth.utils import get_password_hash
 from backend.models import PersonToContact, SessionLocal, Transaction, User
 
 
@@ -50,7 +51,7 @@ def seed_database():
             date_of_birth=date(1990, 5, 15),
             bank_number="4276123456789012",
             username="alex.brown",
-            password="hashed_password_123",
+            password=get_password_hash("password123"),
             person_to_contact_id=contact1.person_to_contact_id,
         )
 
@@ -61,7 +62,7 @@ def seed_database():
             date_of_birth=date(1985, 8, 22),
             bank_number="4276987654321098",
             username="kate.davis",
-            password="hashed_password_456",
+            password=get_password_hash("password456"),
             person_to_contact_id=contact2.person_to_contact_id,
         )
 
@@ -72,7 +73,7 @@ def seed_database():
             date_of_birth=date(1992, 3, 10),
             bank_number="4276555511112222",
             username="mike.wilson",
-            password="hashed_password_789",
+            password=get_password_hash("password789"),
             person_to_contact_id=contact3.person_to_contact_id,
         )
 
@@ -83,7 +84,7 @@ def seed_database():
             date_of_birth=date(1995, 11, 30),
             bank_number="4276333344445555",
             username="sarah.taylor",
-            password="hashed_password_101",
+            password=get_password_hash("password101"),
             person_to_contact_id=None,
         )
 
@@ -186,6 +187,11 @@ def seed_database():
         print(f"  - Created {db.query(PersonToContact).count()} contacts")
         print(f"  - Created {db.query(User).count()} users")
         print(f"  - Created {db.query(Transaction).count()} transactions")
+        print("\n=== Test Users ===")
+        print("Username: alex.brown    | Password: password123")
+        print("Username: kate.davis    | Password: password456")
+        print("Username: mike.wilson   | Password: password789")
+        print("Username: sarah.taylor  | Password: password101")
 
     except Exception as e:
         print(f"✗ Seeding failed: {e}")
