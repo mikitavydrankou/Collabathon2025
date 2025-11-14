@@ -16,8 +16,9 @@ from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 from pydantic import ValidationError
 
+from shared.models import engine
+
 from . import __version__
-from .database import engine
 from .tools import TOOLS
 
 # Configure logging

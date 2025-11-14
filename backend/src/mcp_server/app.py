@@ -7,8 +7,9 @@ Exposes the 3 money transfer tools as REST endpoints for backend agents to call.
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from shared.models import engine
+
 from . import __version__
-from .database import engine
 from .schemas import (
     FilterSuggestionInput,
     FilterSuggestionOutput,

@@ -11,7 +11,7 @@ from typing import Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from backend.models import Transaction, User
+from shared.models import Transaction, User
 
 from .database import (
     filter_transactions,

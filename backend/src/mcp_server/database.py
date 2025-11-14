@@ -10,18 +10,10 @@ from decimal import Decimal
 from typing import Dict, List, Optional, Tuple
 
 from dotenv import load_dotenv
-from sqlalchemy import and_, create_engine, or_
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy import and_, or_
+from sqlalchemy.orm import Session
 
-from backend.models import Transaction, User
-
-load_dotenv()
-
-# Database connection configuration (reuses existing env vars)
-DATABASE_URL = f"postgresql://{os.getenv('DATABASE_USERNAME')}:{os.getenv('DATABASE_PASSWORD')}@{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '5433')}/{os.getenv('DATABASE_NAME')}"
-
-engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
-SessionLocal = sessionmaker(bind=engine)
+from shared.models import Transaction, User, engine, SessionLocal
 
 
 def get_db() -> Session:

@@ -1,11 +1,13 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
+<<<<<<< Updated upstream
 from backend.src.shared.models.user import User
 from backend.src.shared.models.transaction import Transaction
 from backend.models import SessionLocal
+=======
+from backend.models import Transaction, User, SessionLocal
+>>>>>>> Stashed changes
 import numpy as np
-
-db = SessionLocal()
 
 ## Take all historical transactions for a specific user
 
@@ -122,3 +124,21 @@ def is_surname_valid(db: Session, sender_user_id: int, receiver_bank_number: str
             return {"valid": True, "suggestion": None}
 
     return {"valid": False, "suggestion": previous_surnames[0]}
+
+
+if __name__ == "__main__":
+    # Initialize database and seed if needed
+    from backend.db import init_db
+    from backend.seed import seed_database
+    
+    print("Initializing database...")
+    init_db()
+    seed_database()
+    
+    # Test the function
+    db = SessionLocal()
+    try:
+        result = is_surname_valid(db, 1, "4276555511112222", "Brown")
+        print(f"Result: {result}")
+    finally:
+        db.close()
