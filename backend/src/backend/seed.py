@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from backend.models import PersonToContact, SessionLocal, Transaction, User
@@ -161,8 +161,24 @@ def seed_database():
             transaction_text="Project investment",
         )
 
+        # Transaction from one year ago - birthday gift for niece
+        one_year_ago = datetime.now() - timedelta(days=365)
+        transaction6 = Transaction(
+            sender_id=user1.user_id,
+            receiver_id=user2.user_id,  # Using Kate as the niece
+            receiver_name=user2.name,
+            receiver_surname=user2.surname,
+            amount=Decimal("200.00"),
+            transaction_date_and_time=one_year_ago,
+            amount_before=Decimal("50200.00"),
+            amount_after=Decimal("50000.00"),
+            transaction_type="transfer",
+            transaction_posted=True,
+            transaction_text="birthday gift for niece",
+        )
+
         db.add_all(
-            [transaction1, transaction2, transaction3, transaction4, transaction5]
+            [transaction1, transaction2, transaction3, transaction4, transaction5, transaction6]
         )
         db.commit()
 

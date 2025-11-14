@@ -178,16 +178,12 @@ def filter_suggestion_tool(
             limit=input_data.max_number or 10,
         )
 
-        # Convert to contexts
+        # Convert to contexts (include all matching transactions, not deduplicated)
         matched_transactions: List[TransactionContext] = []
-        seen_combinations = set()
 
         for transaction in filtered:
             context = _transaction_to_context(transaction, db)
-            key = (context.recipient_name, context.bank_account)
-            if key not in seen_combinations:
-                matched_transactions.append(context)
-                seen_combinations.add(key)
+            matched_transactions.append(context)
 
         return FilterSuggestionOutput(
             matched_transactions=matched_transactions,
