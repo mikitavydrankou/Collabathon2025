@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 from fastapi import FastAPI
 
-from backend.db import init_db, test_db
+from backend.db import init_db, test_connection
 
 load_dotenv()
 
@@ -27,13 +27,7 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"database": os.getenv("DATABASE_NAME")}
-
-
-@app.get("/test-db")
-def test_database():
-    success = test_db()
-    return {"success": success}
+    return {"database": test_connection()}
 
 
 def start():
