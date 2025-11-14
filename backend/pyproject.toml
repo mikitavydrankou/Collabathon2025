@@ -11,7 +11,11 @@ dependencies = [
 ]
 
 [tool.poetry]
-packages = [{include = "backend", from = "src"}]
+packages = [
+    {include = "shared", from = "src"},
+    {include = "backend", from = "src"},
+    {include = "mcp_server", from = "src"}
+]
 
 [tool.poetry.scripts]
 start = "backend.main:start"
