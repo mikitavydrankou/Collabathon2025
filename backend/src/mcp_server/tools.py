@@ -83,7 +83,7 @@ def first_suggestion_tool(input_data: FirstSuggestionInput) -> FirstSuggestionOu
     db = get_db()
     try:
         transactions: List[TransactionContext] = []
-        seen_combinations = set()  # Track unique (name, account) pairs
+        seen_transaction_ids = set()
 
         # Get time-based transactions (year, month, week ago)
         time_based = get_time_based_transactions(db, input_data.user_id)
@@ -97,19 +97,26 @@ def first_suggestion_tool(input_data: FirstSuggestionInput) -> FirstSuggestionOu
             context = _transaction_to_context(
                 transaction, db, temporal_map.get(time_label, time_label)
             )
-            key = (context.recipient_name, context.bank_account)
-            if key not in seen_combinations:
-                transactions.append(context)
-                seen_combinations.add(key)
+            transactions.append(context)
+            seen_transaction_ids.add(transaction.transaction_id)
 
-        # Get the 2 most recent transactions
-        recent = get_recent_transactions(db, input_data.user_id, limit=2)
+        # Get the 2 most recent transactions (including unposted), excluding those already added
+        recent = (
+            db.query(Transaction)
+            .filter(Transaction.sender_id == input_data.user_id)
+            .order_by(Transaction.transaction_date_and_time.desc())
+            .limit(10)
+            .all()
+        )
+        recent_count = 0
         for transaction in recent:
-            context = _transaction_to_context(transaction, db, "recent")
-            key = (context.recipient_name, context.bank_account)
-            if key not in seen_combinations:
+            if transaction.transaction_id not in seen_transaction_ids:
+                context = _transaction_to_context(transaction, db, "recent")
                 transactions.append(context)
-                seen_combinations.add(key)
+                seen_transaction_ids.add(transaction.transaction_id)
+                recent_count += 1
+                if recent_count >= 2:
+                    break
 
         # Get user balance
         balance = get_user_balance(db, input_data.user_id) or Decimal("0.00")
@@ -151,19 +158,24 @@ def filter_suggestion_tool(
         filters_applied = {}
         if input_data.recipient_name:
             filters_applied["recipient_name"] = input_data.recipient_name
+        if input_data.recipient_bank_account:
+            filters_applied["recipient_bank_account"] = input_data.recipient_bank_account
         if input_data.amount is not None:
             filters_applied["amount"] = float(input_data.amount)
         if input_data.title:
             filters_applied["title"] = input_data.title
+        if input_data.max_number:
+            filters_applied["max_number"] = input_data.max_number
 
         # Filter transactions
         filtered = filter_transactions(
             db,
             input_data.user_id,
             recipient_name=input_data.recipient_name,
+            recipient_bank_account=input_data.recipient_bank_account,
             amount=input_data.amount,
             title=input_data.title,
-            limit=10,
+            limit=input_data.max_number or 10,
         )
 
         # Convert to contexts

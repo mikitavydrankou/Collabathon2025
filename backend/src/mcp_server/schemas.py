@@ -63,8 +63,14 @@ class FilterSuggestionInput(BaseModel):
     recipient_name: Optional[str] = Field(
         None, description="Partial or full recipient name"
     )
+    recipient_bank_account: Optional[str] = Field(
+        None, description="Recipient bank account number"
+    )
     amount: Optional[Decimal] = Field(None, description="Transaction amount to match")
     title: Optional[str] = Field(None, description="Partial or full payment title")
+    max_number: Optional[int] = Field(
+        10, description="Maximum number of transactions to return (default: 10)"
+    )
 
     @field_validator("amount")
     @classmethod
@@ -72,6 +78,18 @@ class FilterSuggestionInput(BaseModel):
         """Ensure amount has at most 2 decimal places if provided."""
         if v is not None:
             return round(v, 2)
+        return v
+
+    @field_validator("max_number")
+    @classmethod
+    def validate_max_number(cls, v: Optional[int]) -> int:
+        """Ensure max_number is positive and reasonable."""
+        if v is None:
+            return 10
+        if v < 1:
+            raise ValueError("max_number must be at least 1")
+        if v > 100:
+            raise ValueError("max_number cannot exceed 100")
         return v
 
 

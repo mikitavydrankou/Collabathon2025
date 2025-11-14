@@ -134,6 +134,7 @@ def filter_transactions(
     db: Session,
     user_id: int,
     recipient_name: Optional[str] = None,
+    recipient_bank_account: Optional[str] = None,
     amount: Optional[Decimal] = None,
     title: Optional[str] = None,
     limit: int = 10,
@@ -145,6 +146,7 @@ def filter_transactions(
         db: Database session
         user_id: ID of the user
         recipient_name: Partial or full recipient name
+        recipient_bank_account: Recipient bank account number
         amount: Transaction amount to match (exact)
         title: Partial or full payment title
         limit: Maximum number of results
@@ -164,6 +166,12 @@ def filter_transactions(
             name_filters.append(Transaction.receiver_name.ilike(f"%{part}%"))
             name_filters.append(Transaction.receiver_surname.ilike(f"%{part}%"))
         query = query.filter(or_(*name_filters))
+
+    if recipient_bank_account:
+        # Join with User table to filter by bank account
+        query = query.join(User, Transaction.receiver_id == User.user_id).filter(
+            User.bank_number == recipient_bank_account
+        )
 
     if amount is not None:
         query = query.filter(Transaction.amount == amount)
