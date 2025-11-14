@@ -2,25 +2,27 @@
 
 ## Setup
 
-Create `.env` from `.env.example` in root and backend directory.
+1. Create `.env` from `.env.example` in root and backend directory.
 
-Start database:
+2. Start database:
 ```
 docker compose up -d
 ```
 
-Install dependencies:
+3. Install poetry dependencies (backend):
 ```
 cd backend
 poetry install
 ```
 
-Run backend:
+4. Run backend:
 ```
 poetry run dev
 ```
 
-Check if database works in outpusts!
+5. Check if database works in log output!
+
+---
 
 Access API:
 - http://localhost:8000/
@@ -28,6 +30,8 @@ Access API:
 
 Access DB:
 - http://localhost:8081
+
+---
 
 Other:
 
