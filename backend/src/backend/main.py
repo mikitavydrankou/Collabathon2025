@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 from fastapi import FastAPI
 
-from backend.db import check
+from backend.db import init_db, test_db
 
 load_dotenv()
 
@@ -14,25 +14,35 @@ app = FastAPI()
 def startup():
     print("Starting FastAPI...")
     try:
-        version = check()
-        print(f"DB connected: {version}")
+        init_db()
+        print("✓ Database initialized")
     except Exception as e:
-        print(f"DB connection failed: {e}")
+        print(f"✗ DB init failed: {e}")
 
 
 @app.get("/")
 def root():
-    print("GET /")
     return {"status": "ok"}
 
 
 @app.get("/health")
 def health():
-    print("GET /health")
     return {"database": os.getenv("DATABASE_NAME")}
+
+
+@app.get("/test-db")
+def test_database():
+    success = test_db()
+    return {"success": success}
 
 
 def start():
     import uvicorn
 
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+def dev():
+    import uvicorn
+
+    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)
