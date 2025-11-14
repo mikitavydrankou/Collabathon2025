@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
-from backend.models.user import User
-from backend.models.transaction import Transaction
+from backend.src.shared.models.user import User
+from backend.src.shared.models.transaction import Transaction
 from backend.models import SessionLocal
 import numpy as np
 
