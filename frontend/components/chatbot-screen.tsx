@@ -397,6 +397,12 @@ export default function ChatbotScreen({ userId, onBack, onConfirmPayment }: Chat
                 >
                   Confirm Payment
                 </Button>
+                {/* Helper text under confirm payment button */}
+                {msg.buttonHelperText && (
+                  <p className="text-xs text-slate-500 mt-3 px-1 leading-relaxed">
+                    {msg.buttonHelperText}
+                  </p>
+                )}
               </div>
             )}
           </div>

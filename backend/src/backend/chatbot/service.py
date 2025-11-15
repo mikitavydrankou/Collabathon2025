@@ -152,6 +152,7 @@ class ChatbotService:
                     stage=state.stage,
                     message=f"{suggestion.reason}\n\nWould you like to use this payment?",
                     buttons=["accept", "decline"],
+                    button_helper_text="No transaction will be made yet. A payment confirmation button will appear next.",
                     suggestion=suggestion,
                     transaction_data=state.transaction_data,
                 )
@@ -206,6 +207,7 @@ class ChatbotService:
                 stage=state.stage,
                 message="Great! Please review and confirm your payment.",
                 buttons=None,
+                button_helper_text="Clicking confirm payment will take you to the security confirmation page.",
                 show_confirm_payment=True,
                 transaction_data=state.transaction_data,
             )
@@ -350,6 +352,7 @@ class ChatbotService:
                 stage=state.stage,
                 message="Great! Please review and confirm your payment.",
                 buttons=None,
+                button_helper_text="Clicking confirm payment will take you to the security confirmation page.",
                 show_confirm_payment=True,
                 transaction_data=state.transaction_data,
             )
@@ -411,6 +414,7 @@ class ChatbotService:
                 stage=state.stage,
                 message="Everything looks good! Please review and confirm your payment.",
                 buttons=None,
+                button_helper_text="Clicking confirm payment will take you to the security confirmation page.",
                 show_confirm_payment=True,
                 transaction_data=state.transaction_data,
             )
@@ -444,6 +448,7 @@ class ChatbotService:
                 stage=state.stage,
                 message="Okay. Please review and confirm your payment.",
                 buttons=None,
+                button_helper_text="Clicking confirm payment will take you to the security confirmation page.",
                 show_confirm_payment=True,
                 transaction_data=state.transaction_data,
             )
