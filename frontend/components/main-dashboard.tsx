@@ -163,8 +163,12 @@ export default function MainDashboard({
   if (currentPage === "send-money") {
     return (
       <SendMoneyPage
-        onBack={() => setCurrentPage("dashboard")}
+        onBack={() => {
+          setCurrentPage("dashboard");
+          fetchTransactions(); // Refresh transactions after sending money
+        }}
         supportLevel={supportLevel}
+        userData={userData}
       />
     );
   }

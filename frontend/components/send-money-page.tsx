@@ -15,6 +15,14 @@ import TransactionConfirmation from "./transaction-confirmation";
 interface SendMoneyPageProps {
   onBack: () => void;
   supportLevel?: "full" | "partial" | "none";
+  userData?: {
+    user_id: number;
+    name: string;
+    surname: string;
+    email: string;
+    balance: number;
+    bank_number: string;
+  };
 }
 
 interface ValidationError {
@@ -29,6 +37,7 @@ interface ValidationError {
 export default function SendMoneyPage({
   onBack,
   supportLevel = "none",
+  userData,
 }: SendMoneyPageProps) {
   const [currentFieldIndex, setCurrentFieldIndex] = useState(0);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -47,8 +56,8 @@ export default function SendMoneyPage({
 
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // TODO: Replace with actual user ID from authentication
-  const userId = 1;
+  // Get user ID from userData or fallback to 1
+  const userId = userData?.user_id || 1;
 
   const fields = [
     {
@@ -388,6 +397,7 @@ export default function SendMoneyPage({
         recipientName={recipientName}
         amount={amount}
         title={title}
+        userId={userId}
       />
     );
   }

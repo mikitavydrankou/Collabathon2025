@@ -115,20 +115,8 @@ class TransactionService:
         Returns:
             List of transaction dictionaries with additional computed fields
         """
-        query = (
-            db.query(Transaction, User.bank_number)
-            .join(
-                User,
-                or_(
-                    Transaction.receiver_id == User.user_id,
-                    Transaction.sender_id == User.user_id,
-                ),
-            )
-            .filter(
-                or_(
-                    Transaction.sender_id == user_id, Transaction.receiver_id == user_id
-                )
-            )
+        query = db.query(Transaction).filter(
+            or_(Transaction.sender_id == user_id, Transaction.receiver_id == user_id)
         )
 
         # Apply filters if provided
@@ -163,34 +151,36 @@ class TransactionService:
 
         # Format results
         transactions = []
-        for transaction, bank_number in results:
+        for transaction in results:
             # Determine if this is a sent or received transaction
             is_sent = transaction.sender_id == user_id
 
-            # Get the appropriate bank number
+            # Get the appropriate user details and bank number
             if is_sent:
-                # For sent transactions, get receiver's bank number
+                # For sent transactions, show receiver info
                 receiver = (
                     db.query(User)
                     .filter(User.user_id == transaction.receiver_id)
                     .first()
                 )
                 account_number = receiver.bank_number if receiver else "Unknown"
+                display_name = transaction.receiver_name
+                display_surname = transaction.receiver_surname
             else:
-                # For received transactions, get sender's bank number
+                # For received transactions, show sender info
                 sender = (
                     db.query(User).filter(User.user_id == transaction.sender_id).first()
                 )
                 account_number = sender.bank_number if sender else "Unknown"
+                display_name = sender.name if sender else "Unknown"
+                display_surname = sender.surname if sender else ""
 
             transaction_dict = {
                 "transaction_id": transaction.transaction_id,
-                "receiver_name": transaction.receiver_name,
-                "receiver_surname": transaction.receiver_surname,
+                "receiver_name": display_name,
+                "receiver_surname": display_surname,
                 "receiver_bank_account": account_number,
-                "amount": float(transaction.amount)
-                if is_sent
-                else float(transaction.amount),
+                "amount": float(transaction.amount),
                 "transaction_date": transaction.transaction_date_and_time.isoformat(),
                 "transaction_type": transaction.transaction_type,
                 "transaction_text": transaction.transaction_text,

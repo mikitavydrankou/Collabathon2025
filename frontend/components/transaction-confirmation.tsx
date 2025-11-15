@@ -12,6 +12,7 @@ interface TransactionConfirmationProps {
   recipientName: string;
   amount: string;
   title: string;
+  userId: number;
 }
 
 export default function TransactionConfirmation({
@@ -21,6 +22,7 @@ export default function TransactionConfirmation({
   recipientName,
   amount,
   title,
+  userId,
 }: TransactionConfirmationProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -28,9 +30,9 @@ export default function TransactionConfirmation({
 
   const formatAmount = (value: string) => {
     const num = parseFloat(value);
-    return new Intl.NumberFormat("de-DE", {
+    return new Intl.NumberFormat("pl-PL", {
       style: "currency",
-      currency: "EUR",
+      currency: "PLN",
       minimumFractionDigits: 2,
     }).format(num);
   };
@@ -45,8 +47,36 @@ export default function TransactionConfirmation({
     setError(null);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Split recipient name into first and last name
+      const nameParts = recipientName.trim().split(/\s+/);
+      const receiver_name = nameParts[0] || "";
+      const receiver_surname =
+        nameParts.slice(1).join(" ") || nameParts[0] || "";
+
+      // Call the real API
+      const response = await fetch(
+        "http://localhost:8000/transactions/create",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            user_id: userId,
+            receiver_bank_number: accountNumber,
+            receiver_name: receiver_name,
+            receiver_surname: receiver_surname,
+            amount: parseFloat(amount),
+            transaction_text: title || `Transfer to ${recipientName}`,
+          }),
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Transaction failed");
+      }
 
       setIsSuccess(true);
 
@@ -55,7 +85,11 @@ export default function TransactionConfirmation({
         onConfirm();
       }, 1500);
     } catch (err) {
-      setError("Transaction failed. Please try again.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Transaction failed. Please try again.",
+      );
       setIsProcessing(false);
     }
   };
@@ -179,7 +213,7 @@ export default function TransactionConfirmation({
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-slate-600">Fee</span>
                   <span className="text-sm font-medium text-slate-900">
-                    €0.00
+                    0.00 zł
                   </span>
                 </div>
                 <div className="border-t border-slate-200 pt-2 mt-2">
