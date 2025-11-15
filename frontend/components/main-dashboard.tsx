@@ -295,9 +295,9 @@ export default function MainDashboard({
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400"></div>
                   </div>
                 ) : transactions.length > 0 ? (
-                  transactions.slice(0, 5).map((transaction) => (
+                  transactions.slice(0, 5).map((transaction, index) => (
                     <button
-                      key={transaction.transaction_id}
+                      key={`${transaction.transaction_id}-${index}`}
                       onClick={() => handleTransactionClick(transaction)}
                       className="w-full flex items-center gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-all group"
                     >
@@ -392,9 +392,9 @@ export default function MainDashboard({
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400"></div>
                   </div>
                 ) : transactions.length > 0 ? (
-                  transactions.map((transaction) => (
+                  transactions.map((transaction, index) => (
                     <button
-                      key={transaction.transaction_id}
+                      key={`${transaction.transaction_id}-${index}`}
                       onClick={() => handleTransactionClick(transaction)}
                       className="w-full p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-all"
                     >
