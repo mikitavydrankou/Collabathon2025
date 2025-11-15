@@ -1,71 +1,71 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { Menu, LogOut, Send, Eye, EyeOff, MoreVertical } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import AccountCard from '@/components/account-card'
-import BottomNavigation from '@/components/bottom-navigation'
+import { useState } from "react";
+import { Menu, LogOut, Send, Eye, EyeOff, MoreVertical } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import AccountCard from "@/components/account-card";
+import BottomNavigation from "@/components/bottom-navigation";
 
 interface DashboardScreenProps {
-  onLogout: () => void
+  onLogout: () => void;
 }
 
 const ACCOUNTS = [
   {
     id: 1,
-    name: 'Girokonto Mein',
-    balance: 2768.50,
-    currency: 'EUR',
-    icon: '💳',
-    color: 'bg-yellow-400',
+    name: "My Checking Account",
+    balance: 2768.5,
+    currency: "PLN",
+    icon: "💳",
+    color: "bg-yellow-400",
   },
   {
     id: 2,
-    name: 'Sparkonto',
+    name: "Savings Account",
     balance: 12450.75,
-    currency: 'EUR',
-    icon: '🏦',
-    color: 'bg-blue-500',
+    currency: "PLN",
+    icon: "🏦",
+    color: "bg-blue-500",
   },
   {
     id: 3,
-    name: 'Geschäftskonto',
-    balance: -340.20,
-    currency: 'EUR',
-    icon: '📊',
-    color: 'bg-green-500',
+    name: "Business Account",
+    balance: -340.2,
+    currency: "PLN",
+    icon: "📊",
+    color: "bg-green-500",
   },
-]
+];
 
 const TRANSACTIONS = [
   {
     id: 1,
-    description: 'Supermarkt Müller',
+    description: "Supermarket Müller",
     amount: -45.99,
-    date: 'Heute',
-    type: 'shopping',
+    date: "Today",
+    type: "shopping",
   },
   {
     id: 2,
-    description: 'Gehalt November',
-    amount: 3200.00,
-    date: 'Gestern',
-    type: 'income',
+    description: "November Salary",
+    amount: 3200.0,
+    date: "Yesterday",
+    type: "income",
   },
   {
     id: 3,
-    description: 'Mietzahlung',
-    amount: -1200.00,
-    date: '12. Nov',
-    type: 'transfer',
+    description: "Rent Payment",
+    amount: -1200.0,
+    date: "Nov 12",
+    type: "transfer",
   },
-]
+];
 
 export default function DashboardScreen({ onLogout }: DashboardScreenProps) {
-  const [hideBalance, setHideBalance] = useState(false)
-  const [activeNav, setActiveNav] = useState('overview')
+  const [hideBalance, setHideBalance] = useState(false);
+  const [activeNav, setActiveNav] = useState("overview");
 
-  const totalBalance = ACCOUNTS.reduce((sum, acc) => sum + acc.balance, 0)
+  const totalBalance = ACCOUNTS.reduce((sum, acc) => sum + acc.balance, 0);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -80,7 +80,10 @@ export default function DashboardScreen({ onLogout }: DashboardScreenProps) {
               <span className="text-accent font-bold text-sm">C</span>
             </div>
           </div>
-          <button onClick={onLogout} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+          <button
+            onClick={onLogout}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
             <LogOut size={20} className="text-foreground" />
           </button>
         </div>
@@ -91,7 +94,9 @@ export default function DashboardScreen({ onLogout }: DashboardScreenProps) {
         {/* Total Balance Card */}
         <div className="bg-gradient-to-br from-accent to-accent/80 text-white rounded-2xl p-6 mb-6 shadow-lg">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-medium opacity-90">Gesamtsaldo aller Konten</h2>
+            <h2 className="text-sm font-medium opacity-90">
+              Total Balance of All Accounts
+            </h2>
             <button
               onClick={() => setHideBalance(!hideBalance)}
               className="p-1 hover:bg-white/20 rounded-lg transition-colors"
@@ -101,53 +106,71 @@ export default function DashboardScreen({ onLogout }: DashboardScreenProps) {
           </div>
           <div className="flex items-baseline gap-2 mb-6">
             <span className="text-4xl font-bold">
-              {hideBalance ? '•••' : `€ ${totalBalance.toLocaleString('de-DE', { minimumFractionDigits: 2 })}`}
+              {hideBalance
+                ? "•••"
+                : `${totalBalance.toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN`}
             </span>
           </div>
           <div className="flex gap-3">
             <Button className="flex-1 bg-white text-accent hover:bg-gray-100 font-semibold py-2 rounded-full">
               <Send size={18} className="mr-2" />
-              Überweisen
+              Transfer
             </Button>
             <Button className="flex-1 bg-white/20 text-white hover:bg-white/30 font-semibold py-2 rounded-full border border-white/30">
-              Mehr
+              More
             </Button>
           </div>
         </div>
 
         {/* Accounts Section */}
         <div className="mb-6">
-          <h3 className="text-sm font-semibold text-gray-600 mb-3 px-1">Meine Konten</h3>
+          <h3 className="text-sm font-semibold text-gray-600 mb-3 px-1">
+            My Accounts
+          </h3>
           <div className="space-y-3">
             {ACCOUNTS.map((account) => (
-              <AccountCard key={account.id} account={account} hideBalance={hideBalance} />
+              <AccountCard
+                key={account.id}
+                account={account}
+                hideBalance={hideBalance}
+              />
             ))}
           </div>
         </div>
 
         {/* Transactions Section */}
         <div>
-          <h3 className="text-sm font-semibold text-gray-600 mb-3 px-1">Transaktionen</h3>
+          <h3 className="text-sm font-semibold text-gray-600 mb-3 px-1">
+            Transactions
+          </h3>
           <div className="space-y-2 bg-white rounded-xl overflow-hidden">
             {TRANSACTIONS.map((transaction, index) => (
               <div
                 key={transaction.id}
                 className={`flex items-center justify-between p-4 ${
-                  index !== TRANSACTIONS.length - 1 ? 'border-b border-gray-100' : ''
+                  index !== TRANSACTIONS.length - 1
+                    ? "border-b border-gray-100"
+                    : ""
                 }`}
               >
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">{transaction.description}</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {transaction.description}
+                  </p>
                   <p className="text-xs text-gray-500">{transaction.date}</p>
                 </div>
                 <span
                   className={`text-sm font-semibold ${
-                    transaction.amount > 0 ? 'text-green-600' : 'text-foreground'
+                    transaction.amount > 0
+                      ? "text-green-600"
+                      : "text-foreground"
                   }`}
                 >
-                  {transaction.amount > 0 ? '+' : ''}€ {Math.abs(transaction.amount).toLocaleString('de-DE', {
+                  {transaction.amount > 0 ? "+" : ""}
+                  {Math.abs(transaction.amount).toLocaleString("pl-PL", {
                     minimumFractionDigits: 2,
-                  })}
+                  })}{" "}
+                  PLN
                 </span>
               </div>
             ))}
@@ -158,5 +181,5 @@ export default function DashboardScreen({ onLogout }: DashboardScreenProps) {
       {/* Bottom Navigation */}
       <BottomNavigation activeNav={activeNav} setActiveNav={setActiveNav} />
     </div>
-  )
+  );
 }

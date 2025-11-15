@@ -361,7 +361,7 @@ export default function SendMoneyPage({
 
   const handleSend = () => {
     alert(
-      `Transfer of €${amount} to ${recipientName} completed!\nAccount: ${accountNumber}\nDescription: ${title}`,
+      `Transfer of ${amount} PLN to ${recipientName} completed!\nAccount: ${accountNumber}\nDescription: ${title}`,
     );
     onBack();
   };

@@ -56,15 +56,15 @@ const portfolioData = [
   { name: "Accounts", value: 184587.65, color: "#1a1a2e" },
   { name: "Loans", value: 45000, color: "#0f3460" },
   { name: "Avails", value: 32000, color: "#e94560" },
-  { name: "Credit cards", value: 18000, color: "#c0c0c0" },
-  { name: "Investment products", value: 25000, color: "#4a90e2" },
+  { name: "Credit Cards", value: 18000, color: "#c0c0c0" },
+  { name: "Investment Products", value: 25000, color: "#4a90e2" },
 ];
 
 const currencyData = [
-  { currency: "EUR", balance: 2400, percentage: "2M10" },
+  { currency: "PLN", balance: 2400, percentage: "2M10" },
   { currency: "USD", balance: 4600, percentage: "465K" },
   { currency: "CNH", balance: 2290, percentage: "32K" },
-  { currency: "CND", balance: 2000, percentage: "278K" },
+  { currency: "CAD", balance: 2000, percentage: "278K" },
 ];
 
 export default function MainDashboard({
@@ -143,16 +143,16 @@ export default function MainDashboard({
     if (diffDays === 1) return "Yesterday";
     if (diffDays < 7) return `${diffDays} days ago`;
 
-    return new Intl.DateTimeFormat("de-DE", {
+    return new Intl.DateTimeFormat("en-GB", {
       day: "2-digit",
       month: "short",
     }).format(date);
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("de-DE", {
+    return new Intl.NumberFormat("pl-PL", {
       style: "currency",
-      currency: "EUR",
+      currency: "PLN",
       minimumFractionDigits: 2,
     }).format(amount);
   };
@@ -197,7 +197,7 @@ export default function MainDashboard({
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-3xl font-bold text-slate-900">
                 {showBalance
-                  ? `${totalBalance.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}`
+                  ? `${totalBalance.toLocaleString("pl-PL", { style: "currency", currency: "PLN" })}`
                   : "••••••"}
               </h2>
               <button
@@ -212,7 +212,7 @@ export default function MainDashboard({
               </button>
             </div>
             <p className="text-xs text-green-600 font-medium">
-              +5.345,25 EUR since last login
+              +5,345.25 PLN since last login
             </p>
           </CardContent>
         </Card>
@@ -230,7 +230,7 @@ export default function MainDashboard({
               value="financial"
               className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
             >
-              Financial overview
+              Financial Overview
             </TabsTrigger>
           </TabsList>
 
@@ -350,7 +350,7 @@ export default function MainDashboard({
             {/* Company Accounts */}
             <Card className="border-0 shadow-sm">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Companies</CardTitle>
+                <CardTitle className="text-base">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {[

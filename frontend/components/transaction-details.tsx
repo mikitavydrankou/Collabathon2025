@@ -1,46 +1,57 @@
-'use client'
+"use client";
 
-import { ArrowLeft, Calendar, CreditCard, FileText, User, TrendingDown, TrendingUp } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import {
+  ArrowLeft,
+  Calendar,
+  CreditCard,
+  FileText,
+  User,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 interface Transaction {
-  transaction_id: number
-  receiver_name: string
-  receiver_bank_account: string
-  amount: number
-  transaction_date: string
-  transaction_type: string
-  transaction_text: string
-  amount_before: number
-  amount_after: number
+  transaction_id: number;
+  receiver_name: string;
+  receiver_bank_account: string;
+  amount: number;
+  transaction_date: string;
+  transaction_type: string;
+  transaction_text: string;
+  amount_before: number;
+  amount_after: number;
 }
 
 interface TransactionDetailsProps {
-  transaction: Transaction
-  onBack: () => void
+  transaction: Transaction;
+  onBack: () => void;
 }
 
-export default function TransactionDetails({ transaction, onBack }: TransactionDetailsProps) {
+export default function TransactionDetails({
+  transaction,
+  onBack,
+}: TransactionDetailsProps) {
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return new Intl.DateTimeFormat('de-DE', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date)
-  }
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('de-DE', {
-      style: 'currency',
-      currency: 'EUR',
-    }).format(amount)
-  }
+    return new Intl.NumberFormat("pl-PL", {
+      style: "currency",
+      currency: "PLN",
+    }).format(amount);
+  };
 
-  const isPositive = transaction.amount > 0
+  const isPositive = transaction.amount > 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
@@ -53,14 +64,18 @@ export default function TransactionDetails({ transaction, onBack }: TransactionD
           >
             <ArrowLeft className="w-5 h-5 text-slate-700" />
           </button>
-          <h1 className="text-lg font-semibold text-slate-900">Transaction Details</h1>
+          <h1 className="text-lg font-semibold text-slate-900">
+            Transaction Details
+          </h1>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="max-w-md mx-auto px-4 py-6 space-y-6">
         {/* Amount Card */}
-        <Card className={`border-0 shadow-sm ${isPositive ? 'bg-gradient-to-br from-green-50 to-white' : 'bg-gradient-to-br from-slate-50 to-white'}`}>
+        <Card
+          className={`border-0 shadow-sm ${isPositive ? "bg-gradient-to-br from-green-50 to-white" : "bg-gradient-to-br from-slate-50 to-white"}`}
+        >
           <CardContent className="pt-6">
             <div className="flex items-center justify-center mb-2">
               {isPositive ? (
@@ -75,10 +90,13 @@ export default function TransactionDetails({ transaction, onBack }: TransactionD
             </div>
             <div className="text-center">
               <p className="text-sm text-slate-600 mb-1">
-                {isPositive ? 'Received' : 'Sent'}
+                {isPositive ? "Received" : "Sent"}
               </p>
-              <h2 className={`text-4xl font-bold ${isPositive ? 'text-green-600' : 'text-slate-900'}`}>
-                {isPositive ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount))}
+              <h2
+                className={`text-4xl font-bold ${isPositive ? "text-green-600" : "text-slate-900"}`}
+              >
+                {isPositive ? "+" : "-"}
+                {formatCurrency(Math.abs(transaction.amount))}
               </h2>
             </div>
           </CardContent>
@@ -97,9 +115,11 @@ export default function TransactionDetails({ transaction, onBack }: TransactionD
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-slate-500 mb-1">
-                  {isPositive ? 'From' : 'To'}
+                  {isPositive ? "From" : "To"}
                 </p>
-                <p className="font-medium text-slate-900">{transaction.receiver_name}</p>
+                <p className="font-medium text-slate-900">
+                  {transaction.receiver_name}
+                </p>
               </div>
             </div>
 
@@ -123,7 +143,9 @@ export default function TransactionDetails({ transaction, onBack }: TransactionD
               </div>
               <div className="flex-1">
                 <p className="text-xs text-slate-500 mb-1">Date & Time</p>
-                <p className="font-medium text-slate-900">{formatDate(transaction.transaction_date)}</p>
+                <p className="font-medium text-slate-900">
+                  {formatDate(transaction.transaction_date)}
+                </p>
               </div>
             </div>
 
@@ -135,7 +157,9 @@ export default function TransactionDetails({ transaction, onBack }: TransactionD
                 </div>
                 <div className="flex-1">
                   <p className="text-xs text-slate-500 mb-1">Reference</p>
-                  <p className="text-sm text-slate-900">{transaction.transaction_text}</p>
+                  <p className="text-sm text-slate-900">
+                    {transaction.transaction_text}
+                  </p>
                 </div>
               </div>
             )}
@@ -150,11 +174,15 @@ export default function TransactionDetails({ transaction, onBack }: TransactionD
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
               <span className="text-sm text-slate-600">Balance Before</span>
-              <span className="font-semibold text-slate-900">{formatCurrency(transaction.amount_before)}</span>
+              <span className="font-semibold text-slate-900">
+                {formatCurrency(transaction.amount_before)}
+              </span>
             </div>
             <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
               <span className="text-sm text-slate-600">Balance After</span>
-              <span className="font-semibold text-slate-900">{formatCurrency(transaction.amount_after)}</span>
+              <span className="font-semibold text-slate-900">
+                {formatCurrency(transaction.amount_after)}
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -162,7 +190,9 @@ export default function TransactionDetails({ transaction, onBack }: TransactionD
         {/* Transaction ID */}
         <div className="text-center py-4">
           <p className="text-xs text-slate-500">Transaction ID</p>
-          <p className="text-sm font-mono text-slate-700 mt-1">#{transaction.transaction_id}</p>
+          <p className="text-sm font-mono text-slate-700 mt-1">
+            #{transaction.transaction_id}
+          </p>
         </div>
 
         {/* Action Buttons */}
@@ -176,5 +206,5 @@ export default function TransactionDetails({ transaction, onBack }: TransactionD
         </div>
       </div>
     </div>
-  )
+  );
 }

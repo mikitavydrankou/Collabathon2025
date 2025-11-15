@@ -62,9 +62,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
         </div>
 
         <h1 className="text-white text-center">
-          <p className="text-lg font-light tracking-wide mb-2">
-            Willkommen bei der
-          </p>
+          <p className="text-lg font-light tracking-wide mb-2">Welcome to</p>
           <p className="text-4xl font-bold">Commerzbank</p>
         </h1>
       </div>
@@ -76,7 +74,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Benutzername / Teilnehmernummer"
+              placeholder="Username / Participant Number"
               className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:outline-none focus:border-slate-700 focus:ring-2 focus:ring-slate-200 transition-all text-slate-900 placeholder:text-slate-400 font-medium"
             />
           </div>
@@ -87,7 +85,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Passwort / PIN"
+                placeholder="Password / PIN"
                 className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:outline-none focus:border-slate-700 focus:ring-2 focus:ring-slate-200 transition-all text-slate-900 placeholder:text-slate-400 font-medium"
               />
               <button
@@ -111,7 +109,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
               type="button"
               className="text-slate-600 hover:text-slate-800 text-sm font-medium transition-colors"
             >
-              Zugangsdaten vergessen
+              Forgot credentials
             </button>
           </div>
 
@@ -130,7 +128,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
               )}
             </button>
             <label className="text-sm text-slate-600 cursor-pointer font-medium">
-              Benutzerdaten merken
+              Remember user data
             </label>
           </div>
 
@@ -139,7 +137,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
             disabled={!username || !password || isLoading}
             className="w-full bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-bold py-3 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
           >
-            {isLoading ? "Einloggen..." : "Einloggen"}
+            {isLoading ? "Logging in..." : "Login"}
           </Button>
         </form>
 
