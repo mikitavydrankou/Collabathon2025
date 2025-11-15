@@ -185,6 +185,17 @@ class ChatbotService:
                 transaction_data=state.transaction_data,
             )
 
+        elif action == "no":
+            # User wants to end the chat
+            logger.info(f"   ✅ User wants to end the chat")
+            return ChatbotMessageResponse(
+                session_id=state.session_id,
+                stage=state.stage,
+                message="Thank you for using our payment assistant. Have a great day!",
+                buttons=None,
+                transaction_data=state.transaction_data,
+            )
+
         return ChatbotMessageResponse(
             session_id=state.session_id,
             stage=state.stage,
@@ -303,6 +314,7 @@ class ChatbotService:
         if filter_suggestion:
             logger.info(f"   ✅ Filter suggestion found! Transitioning to FILTER_SUGGESTION stage")
             state.filter_suggestion_shown = True
+            state.current_filter_suggestion = filter_suggestion  # Store for change_to_suggested action
             state.stage = ChatbotStage.FILTER_SUGGESTION
             cls.update_session(state)
 
@@ -430,7 +442,8 @@ class ChatbotService:
                 session_id=state.session_id,
                 stage=state.stage,
                 message=MainAgent.format_problems_message(problems),
-                buttons=["continue", "cancel"],
+                buttons=["continue", "change_to_suggested", "cancel"],
+                button_helper_text="Continue: Proceed with current payment details. Change To Suggested: Update to use the suggested account that matches your recipient. Cancel: Cancel this payment and return to start.",
                 validation_problems=problems,
                 transaction_data=state.transaction_data,
             )
@@ -453,11 +466,45 @@ class ChatbotService:
                 transaction_data=state.transaction_data,
             )
 
+        elif action == "change_to_suggested":
+            # User wants to use the suggested account/name
+            if state.current_filter_suggestion:
+                logger.info(f"   ✅ User wants to change to suggested: {state.current_filter_suggestion.recipient_name}")
+                # Update transaction data with suggested values
+                state.transaction_data.recipient_account = state.current_filter_suggestion.bank_account
+                state.transaction_data.recipient_name = state.current_filter_suggestion.recipient_name
+                if state.current_filter_suggestion.amount:
+                    state.transaction_data.amount = Decimal(str(state.current_filter_suggestion.amount))
+                if state.current_filter_suggestion.title:
+                    state.transaction_data.transaction_text = state.current_filter_suggestion.title
+                
+                # Clear validation problems and re-run final check
+                state.validation_problems = []
+                state.awaiting_problem_response = False
+                cls.update_session(state)
+                
+                return cls._run_final_check(state)
+            else:
+                # No suggestion available, just continue
+                state.stage = ChatbotStage.COMPLETED
+                cls.update_session(state)
+                
+                return ChatbotMessageResponse(
+                    session_id=state.session_id,
+                    stage=state.stage,
+                    message="Okay. Please review and confirm your payment.",
+                    buttons=None,
+                    button_helper_text="Clicking confirm payment will take you to the security confirmation page.",
+                    show_confirm_payment=True,
+                    transaction_data=state.transaction_data,
+                )
+
         elif action == "cancel":
             # User wants to cancel
             state.stage = ChatbotStage.INITIAL
             state.transaction_data = TransactionData()
             state.filter_suggestion_shown = False
+            state.current_filter_suggestion = None
             state.awaiting_problem_response = False
             state.validation_problems = []
             cls.update_session(state)
@@ -474,7 +521,8 @@ class ChatbotService:
             session_id=state.session_id,
             stage=state.stage,
             message="Please choose an option.",
-            buttons=["continue", "cancel"],
+            buttons=["continue", "change_to_suggested", "cancel"],
+            button_helper_text="Continue: Proceed with current payment details. Change To Suggested: Update to use the suggested account that matches your recipient. Cancel: Cancel this payment and return to start.",
             validation_problems=state.validation_problems,
             transaction_data=state.transaction_data,
         )

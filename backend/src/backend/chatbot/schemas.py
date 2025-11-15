@@ -41,6 +41,7 @@ class ChatbotState(BaseModel):
     stage: ChatbotStage = Field(default=ChatbotStage.INITIAL)
     transaction_data: TransactionData = Field(default_factory=TransactionData)
     first_suggestion: Optional["SuggestionInfo"] = Field(default=None, description="First suggestion shown to user (to avoid duplicates)")
+    current_filter_suggestion: Optional["SuggestionInfo"] = Field(default=None, description="Current filter suggestion (for change_to_suggested action)")
     filter_suggestion_shown: bool = Field(default=False, description="Whether filter suggestion was already shown")
     awaiting_problem_response: bool = Field(default=False, description="Whether waiting for user to respond to validation problems")
     validation_problems: List[str] = Field(default_factory=list, description="Current validation problems")

@@ -22,11 +22,7 @@ interface ChatMessage {
   validationProblems?: string[];
 }
 
-export default function ChatbotScreen({
-  userId,
-  onBack,
-  onConfirmPayment,
-}: ChatbotScreenProps) {
+export default function ChatbotScreen({ userId, onBack, onConfirmPayment }: ChatbotScreenProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -93,9 +89,9 @@ export default function ChatbotScreen({
   const formatButtonText = (action: string): string => {
     // Convert snake_case to Title Case
     return action
-      .split("_")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   };
 
   const handleButtonClick = async (action: string) => {
@@ -192,27 +188,25 @@ export default function ChatbotScreen({
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: "audio/webm",
+        mimeType: 'audio/webm'
       });
-
+      
       audioChunksRef.current = [];
-
+      
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
-
+      
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, {
-          type: "audio/webm",
-        });
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         await transcribeAudio(audioBlob);
-
+        
         // Stop all tracks to release microphone
-        stream.getTracks().forEach((track) => track.stop());
+        stream.getTracks().forEach(track => track.stop());
       };
-
+      
       mediaRecorderRef.current = mediaRecorder;
       mediaRecorder.start();
       setIsRecording(true);
@@ -261,7 +255,7 @@ export default function ChatbotScreen({
       const result = await apiClient.extractTextFromImage(file);
       if (result.success && result.text) {
         // Append OCR text to existing input or replace it
-        const newText = inputValue
+        const newText = inputValue 
           ? `${inputValue}\n\n[From image: ${result.text}]`
           : result.text;
         setInputValue(newText);
@@ -283,7 +277,7 @@ export default function ChatbotScreen({
       setIsProcessing(false);
       // Reset file input
       if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+        fileInputRef.current.value = '';
       }
     }
   };
@@ -342,8 +336,8 @@ export default function ChatbotScreen({
                       {msg.suggestion.bank_account}
                     </p>
                     <p>
-                      <span className="font-medium">Amount:</span>{" "}
-                      {msg.suggestion.amount.toFixed(2)} PLN
+                      <span className="font-medium">Amount:</span> €
+                      {msg.suggestion.amount.toFixed(2)}
                     </p>
                     <p>
                       <span className="font-medium">Description:</span>{" "}
@@ -359,12 +353,14 @@ export default function ChatbotScreen({
               <div className="mt-3 ml-2">
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 max-w-[80%]">
                   <div className="text-xs text-amber-600 font-semibold mb-2">
-                    ISSUES FOUND
+                    Please check
                   </div>
                   <ul className="space-y-1 text-sm text-amber-900">
-                    {msg.validationProblems.map((problem, idx) => (
-                      <li key={idx}>• {problem}</li>
-                    ))}
+                    {msg.validationProblems.map((problem, idx) => {
+                      // Remove "Warning:" prefix if present
+                      const cleanProblem = problem.replace(/^Warning:\s*/i, '');
+                      return <li key={idx}>• {cleanProblem}</li>;
+                    })}
                   </ul>
                 </div>
               </div>
@@ -446,7 +442,7 @@ export default function ChatbotScreen({
           onChange={handleImageCapture}
           className="hidden"
         />
-
+        
         {/* Camera and Microphone buttons */}
         <div className="flex gap-2 mb-3">
           <button
@@ -460,7 +456,7 @@ export default function ChatbotScreen({
               {isProcessing && !isRecording ? "Processing..." : "Camera"}
             </span>
           </button>
-
+          
           <button
             onClick={isRecording ? stopRecording : startRecording}
             disabled={isLoading || isProcessing}
