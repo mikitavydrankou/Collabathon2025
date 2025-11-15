@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 interface Transaction {
   transaction_id: number;
   receiver_name: string;
+  receiver_surname: string;
   receiver_bank_account: string;
   amount: number;
   transaction_date: string;
@@ -22,6 +23,8 @@ interface Transaction {
   transaction_text: string;
   amount_before: number;
   amount_after: number;
+  is_sent: boolean;
+  transaction_posted: boolean;
 }
 
 interface TransactionDetailsProps {
@@ -51,7 +54,10 @@ export default function TransactionDetails({
     }).format(amount);
   };
 
-  const isPositive = transaction.amount > 0;
+  // Use is_sent field to determine transaction type
+  // is_sent: true means we sent money (negative for us)
+  // is_sent: false means we received money (positive for us)
+  const isReceived = !transaction.is_sent;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
@@ -74,11 +80,11 @@ export default function TransactionDetails({
       <div className="max-w-md mx-auto px-4 py-6 space-y-6">
         {/* Amount Card */}
         <Card
-          className={`border-0 shadow-sm ${isPositive ? "bg-gradient-to-br from-green-50 to-white" : "bg-gradient-to-br from-slate-50 to-white"}`}
+          className={`border-0 shadow-sm ${isReceived ? "bg-gradient-to-br from-green-50 to-white" : "bg-gradient-to-br from-slate-50 to-white"}`}
         >
           <CardContent className="pt-6">
             <div className="flex items-center justify-center mb-2">
-              {isPositive ? (
+              {isReceived ? (
                 <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
                   <TrendingUp className="w-8 h-8 text-green-600" />
                 </div>
@@ -90,12 +96,12 @@ export default function TransactionDetails({
             </div>
             <div className="text-center">
               <p className="text-sm text-slate-600 mb-1">
-                {isPositive ? "Received" : "Sent"}
+                {isReceived ? "Received" : "Sent"}
               </p>
               <h2
-                className={`text-4xl font-bold ${isPositive ? "text-green-600" : "text-slate-900"}`}
+                className={`text-4xl font-bold ${isReceived ? "text-green-600" : "text-slate-900"}`}
               >
-                {isPositive ? "+" : "-"}
+                {isReceived ? "+" : "-"}
                 {formatCurrency(Math.abs(transaction.amount))}
               </h2>
             </div>
@@ -115,10 +121,10 @@ export default function TransactionDetails({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-slate-500 mb-1">
-                  {isPositive ? "From" : "To"}
+                  {isReceived ? "From" : "To"}
                 </p>
                 <p className="font-medium text-slate-900">
-                  {transaction.receiver_name}
+                  {transaction.receiver_name} {transaction.receiver_surname}
                 </p>
               </div>
             </div>
