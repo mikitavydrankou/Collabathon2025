@@ -12,7 +12,6 @@ from backend.transactions.schemas import (
     TransactionDetailResponse,
     TransactionFilter,
     TransactionListResponse,
-    TransactionResponse,
     TransactionStats,
 )
 from backend.transactions.services import TransactionService
@@ -62,34 +61,34 @@ async def create_transaction(
             transaction=None,
         )
 
-    # Format transaction response
-    transaction_response = TransactionResponse(
-        transaction_id=int(transaction.transaction_id),
-        sender_id=int(transaction.sender_id),
-        receiver_id=int(transaction.receiver_id),
-        receiver_name=str(transaction.receiver_name),
-        receiver_surname=str(transaction.receiver_surname),
-        amount=Decimal(str(transaction.amount)),
-        transaction_date_and_time=transaction.transaction_date_and_time,
-        amount_before=Decimal(str(transaction.amount_before)),
-        amount_after=Decimal(str(transaction.amount_after)),
-        transaction_type=str(transaction.transaction_type),
-        transaction_posted=bool(transaction.transaction_posted),
-        transaction_text=str(transaction.transaction_text)
+    # Format transaction response as dict
+    transaction_dict = {
+        "transaction_id": int(transaction.transaction_id),
+        "sender_id": int(transaction.sender_id),
+        "receiver_id": int(transaction.receiver_id),
+        "receiver_name": str(transaction.receiver_name),
+        "receiver_surname": str(transaction.receiver_surname),
+        "amount": float(transaction.amount),
+        "transaction_date_and_time": transaction.transaction_date_and_time.isoformat(),
+        "amount_before": float(transaction.amount_before),
+        "amount_after": float(transaction.amount_after),
+        "transaction_type": str(transaction.transaction_type),
+        "transaction_posted": bool(transaction.transaction_posted),
+        "transaction_text": str(transaction.transaction_text)
         if transaction.transaction_text
         else None,
-        receiver_bank_account=request.receiver_bank_number,
-    )
+        "receiver_bank_account": request.receiver_bank_number,
+    }
 
-    return CreateTransactionResponse(
-        success=True,
-        message=message,
-        transaction_id=int(transaction.transaction_id),
-        transaction=transaction_response,
-    )
+    return {
+        "success": True,
+        "message": message,
+        "transaction_id": int(transaction.transaction_id),
+        "transaction": transaction_dict,
+    }
 
 
-@router.get("/{user_id}", response_model=TransactionListResponse)
+@router.get("/{user_id}")
 async def get_user_transactions(
     user_id: int,
     limit: int = Query(
@@ -154,45 +153,16 @@ async def get_user_transactions(
     total = len(transactions) if not offset else offset + len(transactions)
     has_more = len(transactions) == limit
 
-    # Convert dict transactions to TransactionResponse objects
-    transaction_responses: list[Any] = transactions  # Type hint bypass for flexibility
-
-    return TransactionListResponse(
-        transactions=transaction_responses,
-        total=total,
-        page=offset // limit + 1 if limit > 0 else 1,
-        page_size=len(transactions),
-        has_more=has_more,
-    )
+    return {
+        "transactions": transactions,
+        "total": total,
+        "page": offset // limit + 1 if limit > 0 else 1,
+        "page_size": len(transactions),
+        "has_more": has_more,
+    }
 
 
-@router.get("/{user_id}/{transaction_id}", response_model=TransactionDetailResponse)
-async def get_transaction_detail(
-    user_id: int,
-    transaction_id: int,
-    db: Session = Depends(get_db),
-):
-    """
-    Get detailed information about a specific transaction
-
-    User must be either sender or receiver
-    """
-    transaction = TransactionService.get_transaction_by_id(
-        db=db,
-        transaction_id=transaction_id,
-        user_id=user_id,
-    )
-
-    if not transaction:
-        raise HTTPException(
-            status_code=404,
-            detail="Transaction not found or you don't have permission to view it",
-        )
-
-    return TransactionDetailResponse(**transaction)
-
-
-@router.get("/{user_id}/stats", response_model=TransactionStats)
+@router.get("/{user_id}/stats")
 async def get_transaction_stats(
     user_id: int,
     db: Session = Depends(get_db),
@@ -212,30 +182,14 @@ async def get_transaction_stats(
         raise HTTPException(status_code=404, detail="User not found")
 
     stats = TransactionService.get_transaction_stats(db=db, user_id=user_id)
-    return stats
-
-
-@router.delete("/{user_id}/{transaction_id}")
-async def cancel_transaction(
-    user_id: int,
-    transaction_id: int,
-    db: Session = Depends(get_db),
-):
-    """
-    Cancel a pending transaction
-
-    Only the sender can cancel, and only if the transaction hasn't been posted
-    """
-    success, message = TransactionService.cancel_transaction(
-        db=db,
-        transaction_id=transaction_id,
-        user_id=user_id,
-    )
-
-    if not success:
-        raise HTTPException(status_code=400, detail=message)
-
-    return {"success": True, "message": message}
+    return {
+        "total_sent": float(stats.total_sent),
+        "total_received": float(stats.total_received),
+        "total_transactions": stats.total_transactions,
+        "sent_count": stats.sent_count,
+        "received_count": stats.received_count,
+        "pending_count": stats.pending_count,
+    }
 
 
 @router.get("/{user_id}/recent-receivers")
@@ -265,6 +219,55 @@ async def get_recent_receivers(
         "recent_receivers": receivers,
         "count": len(receivers),
     }
+
+
+@router.get("/{user_id}/{transaction_id}")
+async def get_transaction_detail(
+    user_id: int,
+    transaction_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+    Get detailed information about a specific transaction
+
+    User must be either sender or receiver
+    """
+    transaction = TransactionService.get_transaction_by_id(
+        db=db,
+        transaction_id=transaction_id,
+        user_id=user_id,
+    )
+
+    if not transaction:
+        raise HTTPException(
+            status_code=404,
+            detail="Transaction not found or you don't have permission to view it",
+        )
+
+    return transaction
+
+
+@router.delete("/{user_id}/{transaction_id}")
+async def cancel_transaction(
+    user_id: int,
+    transaction_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+    Cancel a pending transaction
+
+    Only the sender can cancel, and only if the transaction hasn't been posted
+    """
+    success, message = TransactionService.cancel_transaction(
+        db=db,
+        transaction_id=transaction_id,
+        user_id=user_id,
+    )
+
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+
+    return {"success": True, "message": message}
 
 
 @router.post("/verify-receiver")
