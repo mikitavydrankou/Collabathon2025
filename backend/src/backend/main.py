@@ -1,28 +1,10 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.auth import router as auth_router
 from backend.chatbot.routes import router as chatbot_router
-from sqlalchemy.orm import Session
-
-
+from backend.utils.routes import router as utils_router
 from backend.db import init_db, test_connection
 from backend.seed import seed_database
-from backend.utils.unusual_behavior import is_fullname_valid, is_bankNumber_valid, is_amount_valid
-from backend.db import get_db
-from pydantic import BaseModel, Field
-
-class AmountCheckRequest(BaseModel):
-    user_id: int = Field(..., gt=0)
-    amount: float = Field(..., gt=0)
-
-class BankNumberCheckRequest(BaseModel):
-    user_id: int = Field(..., gt=0)
-    bank_number: str = Field(..., min_length=8, max_length=34)
-
-class FullnameCheckRequest(BaseModel):
-    user_id: int = Field(..., gt=0)
-    bank_number: str = Field(..., min_length=8, max_length=34)
-    fullname: str = Field(..., min_length=1, max_length=100)
 
 app = FastAPI()
 
@@ -36,6 +18,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(chatbot_router)
+app.include_router(utils_router)
 
 
 @app.on_event("startup")
@@ -53,26 +36,9 @@ def startup():
 def root():
     return {"status": "ok"}
 
-
 @app.get("/health")
 def health():
     return {"database": test_connection()}
-
-
-@app.post("/validate_amount")
-def validate_amount_endpoint(payload: AmountCheckRequest, db=Depends(get_db)):
-    result = is_amount_valid(db, payload.user_id, payload.amount)
-    return result
-
-@app.post("/validate_bank_number")
-def validate_bank_number_endpoint(payload: BankNumberCheckRequest, db=Depends(get_db)):
-    result = is_bankNumber_valid(db, payload.user_id, payload.bank_number)
-    return result
-
-@app.post("/validate_fullname")
-def validate_fullname_endpoint(payload: FullnameCheckRequest, db=Depends(get_db)):
-    result = is_fullname_valid(db, payload.user_id, payload.bank_number, payload.fullname)
-    return result
 
 def start():
     import uvicorn
