@@ -1,4 +1,6 @@
-from typing import Optional
+from datetime import datetime
+from decimal import Decimal
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -62,25 +64,27 @@ async def create_transaction(
 
     # Format transaction response
     transaction_response = TransactionResponse(
-        transaction_id=transaction.transaction_id,
-        sender_id=transaction.sender_id,
-        receiver_id=transaction.receiver_id,
-        receiver_name=transaction.receiver_name,
-        receiver_surname=transaction.receiver_surname,
-        amount=transaction.amount,
+        transaction_id=int(transaction.transaction_id),
+        sender_id=int(transaction.sender_id),
+        receiver_id=int(transaction.receiver_id),
+        receiver_name=str(transaction.receiver_name),
+        receiver_surname=str(transaction.receiver_surname),
+        amount=Decimal(str(transaction.amount)),
         transaction_date_and_time=transaction.transaction_date_and_time,
-        amount_before=transaction.amount_before,
-        amount_after=transaction.amount_after,
-        transaction_type=transaction.transaction_type,
-        transaction_posted=transaction.transaction_posted,
-        transaction_text=transaction.transaction_text,
+        amount_before=Decimal(str(transaction.amount_before)),
+        amount_after=Decimal(str(transaction.amount_after)),
+        transaction_type=str(transaction.transaction_type),
+        transaction_posted=bool(transaction.transaction_posted),
+        transaction_text=str(transaction.transaction_text)
+        if transaction.transaction_text
+        else None,
         receiver_bank_account=request.receiver_bank_number,
     )
 
     return CreateTransactionResponse(
         success=True,
         message=message,
-        transaction_id=transaction.transaction_id,
+        transaction_id=int(transaction.transaction_id),
         transaction=transaction_response,
     )
 
@@ -123,11 +127,16 @@ async def get_user_transactions(
         raise HTTPException(status_code=404, detail="User not found")
 
     # Build filters
+    from datetime import datetime as dt
+
+    start_dt = dt.fromisoformat(start_date) if start_date else None
+    end_dt = dt.fromisoformat(end_date) if end_date else None
+
     filters = TransactionFilter(
-        start_date=start_date,
-        end_date=end_date,
-        min_amount=min_amount,
-        max_amount=max_amount,
+        start_date=start_dt,
+        end_date=end_dt,
+        min_amount=Decimal(str(min_amount)) if min_amount is not None else None,
+        max_amount=Decimal(str(max_amount)) if max_amount is not None else None,
         transaction_type=transaction_type,
         posted_only=posted_only,
     )
@@ -145,8 +154,11 @@ async def get_user_transactions(
     total = len(transactions) if not offset else offset + len(transactions)
     has_more = len(transactions) == limit
 
+    # Convert dict transactions to TransactionResponse objects
+    transaction_responses: list[Any] = transactions  # Type hint bypass for flexibility
+
     return TransactionListResponse(
-        transactions=transactions,
+        transactions=transaction_responses,
         total=total,
         page=offset // limit + 1 if limit > 0 else 1,
         page_size=len(transactions),
