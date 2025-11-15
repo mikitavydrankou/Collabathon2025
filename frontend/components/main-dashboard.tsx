@@ -410,9 +410,9 @@ export default function MainDashboard({
             {/* All Transactions */}
             <Card className="border-0 shadow-sm">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">All Transactions</CardTitle>
+                <CardTitle className="text-base">Recent Transactions</CardTitle>
                 <CardDescription className="text-xs">
-                  Complete transaction history
+                  Last 10 transactions
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -421,7 +421,7 @@ export default function MainDashboard({
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400"></div>
                   </div>
                 ) : transactions.length > 0 ? (
-                  transactions.map((transaction, index) => (
+                  transactions.slice(0, 10).map((transaction, index) => (
                     <button
                       key={`${transaction.transaction_id}-${index}`}
                       onClick={() => handleTransactionClick(transaction)}
