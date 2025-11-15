@@ -90,17 +90,16 @@ def get_last_n_transactions(db: Session, user_id: int, n: int) -> list[Transacti
         .limit(n)
         .all()
     )
-    def get_fullname_by_id(user_id: int) -> str | None:
-        user = db.get(User, user_id)
-        if user:
-            return f"{user.name} {user.surname}"
-        return None
     transactions_json = []
     for tx in transactions:
         transactions_json.append({
-            "sender_name": get_fullname_by_id(tx.sender_id),
-            "receiver_name": get_fullname_by_id(tx.receiver_id),
+            "receiver_name": f"{tx.receiver.name} {tx.receiver.surname}",
             "amount": float(tx.amount),
+            "transaction_date": tx.transaction_date_and_time.isoformat(),
+            "transaction_type": tx.transaction_type,
+            "transaction_text": tx.transaction_text,
+            "amount_before": float(tx.amount_before),
+            "amount_after": float(tx.amount_after),
         })
     return transactions_json
 
@@ -122,7 +121,14 @@ def get_most_frequent_receiver(db: Session, user_id: int) -> int | None:
         .order_by(func.count(Transaction.receiver_id).desc())
         .first()
     )
-    return result.receiver_id if result else None
+
+    def get_fullname_by_id(user_id: int) -> str | None:
+        user = db.query(User).filter(User.user_id == user_id).first()
+        if user:
+            return f"{user.name} {user.surname}"
+        return None
+
+    return get_fullname_by_id(result.receiver_id) if result else None
 
 def get_largest_expense(db: Session, user_id: int) -> float:
     """
@@ -180,36 +186,36 @@ def get_monthly_trend(db: Session, user_id: int, months_back: int = 6) -> list[d
     return trend
 
 ## TESTING THE FUNCTIONS
-from backend.models import SessionLocal
-db = SessionLocal()
+##from backend.models import SessionLocal
+##db = SessionLocal()
 
-functions = [
-    get_total_expenses,
-    get_total_income,
-    get_transaction_count,
-    get_last_n_transactions,
-    get_most_frequent_receiver,
-    get_largest_expense,
-    get_monthly_trend,
-]
+##functions = [
+##    get_total_expenses,
+##    get_total_income,
+##    get_transaction_count,
+##    get_last_n_transactions,
+##    get_most_frequent_receiver,
+##    get_largest_expense,
+##    get_monthly_trend,
+##]
 
-print("Testing CRUD functions:")
-for f in functions:
-    print(f"Function: {f.__name__}")
-    if f == get_total_expenses:
-        print(f(db, user_id=1, days=400))
-    elif f == get_total_income:
-        print(f(db, user_id=1, days=400))
-    elif f == get_transaction_count:
-        print(f(db, user_id=1, days=400))
-    elif f == get_last_n_transactions:
-        print(f(db, user_id=1, n=5))
-    elif f == get_most_frequent_receiver:
-        print(f(db, user_id=1))
-    elif f == get_largest_expense:
-        print(f(db, user_id=1))
-    elif f == get_monthly_trend:
-        print(f(db, user_id=1, months_back=15))
-    print("-" * 40)
+# print("Testing CRUD functions:")
+# for f in functions:
+#    print(f"Function: {f.__name__}")
+#    if f == get_total_expenses:
+#        print(f(db, user_id=1, days=400))
+#    elif f == get_total_income:
+#        print(f(db, user_id=1, days=400))
+#    elif f == get_transaction_count:
+#        print(f(db, user_id=1, days=400))
+#    elif f == get_last_n_transactions:
+#        print(f(db, user_id=1, n=5))
+#    elif f == get_most_frequent_receiver:
+#        print(f(db, user_id=1))
+#    elif f == get_largest_expense:
+#        print(f(db, user_id=1))
+#    elif f == get_monthly_trend:
+#        print(f(db, user_id=1, months_back=15))
+#    print("-" * 40)
 
-db.close()
+# db.close()
