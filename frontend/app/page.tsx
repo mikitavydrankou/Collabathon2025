@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import LoginScreen from "@/components/login-screen";
 import MainDashboard from "@/components/main-dashboard";
-import UnifiedTransactionFlow from "@/components/unified-transaction-flow";
 import { apiClient } from "@/lib/api";
 
 export default function Home() {
@@ -45,10 +44,6 @@ export default function Home() {
 
   if (!isLoggedIn) {
     return <LoginScreen onLogin={handleLogin} />;
-  }
-
-  if (currentPage === "transaction") {
-    return <UnifiedTransactionFlow />;
   }
 
   return (
