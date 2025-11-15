@@ -43,6 +43,7 @@ interface MainDashboardProps {
 interface Transaction {
   transaction_id: number;
   receiver_name: string;
+  receiver_surname: string;
   receiver_bank_account: string;
   amount: number;
   transaction_date: string;
@@ -50,6 +51,8 @@ interface Transaction {
   transaction_text: string;
   amount_before: number;
   amount_after: number;
+  is_sent: boolean;
+  transaction_posted: boolean;
 }
 
 const portfolioData = [
@@ -303,34 +306,39 @@ export default function MainDashboard({
                     >
                       <div
                         className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          transaction.amount < 0
-                            ? "bg-slate-200"
-                            : "bg-green-100"
+                          transaction.is_sent ? "bg-slate-200" : "bg-green-100"
                         }`}
                       >
-                        {transaction.amount < 0 ? (
+                        {transaction.is_sent ? (
                           <ArrowUpRight className="w-5 h-5 text-slate-600" />
                         ) : (
                           <ArrowDownLeft className="w-5 h-5 text-green-600" />
                         )}
                       </div>
-                      <div className="flex-1 text-left min-w-0">
+                      <div className="text-left flex-1 min-w-0">
                         <p className="font-medium text-sm text-slate-900 truncate">
-                          {transaction.receiver_name}
+                          {transaction.is_sent
+                            ? transaction.receiver_name
+                            : `${transaction.receiver_name} ${transaction.receiver_surname}`}
                         </p>
-                        <p className="text-xs text-slate-500 truncate">
+                        <p className="text-xs text-slate-500">
                           {formatDate(transaction.transaction_date)}
                         </p>
+                        {transaction.transaction_text && (
+                          <p className="text-xs text-slate-400 truncate mt-0.5">
+                            {transaction.transaction_text}
+                          </p>
+                        )}
                       </div>
-                      <div className="text-right">
+                      <div className="text-right flex-shrink-0">
                         <p
                           className={`font-semibold text-sm ${
-                            transaction.amount < 0
+                            transaction.is_sent
                               ? "text-slate-900"
                               : "text-green-600"
                           }`}
                         >
-                          {transaction.amount < 0 ? "-" : "+"}
+                          {transaction.is_sent ? "-" : "+"}
                           {formatCurrency(Math.abs(transaction.amount))}
                         </p>
                       </div>
@@ -402,12 +410,12 @@ export default function MainDashboard({
                         <div className="flex items-center gap-2">
                           <div
                             className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                              transaction.amount < 0
+                              transaction.is_sent
                                 ? "bg-slate-200"
                                 : "bg-green-100"
                             }`}
                           >
-                            {transaction.amount < 0 ? (
+                            {transaction.is_sent ? (
                               <ArrowUpRight className="w-4 h-4 text-slate-600" />
                             ) : (
                               <ArrowDownLeft className="w-4 h-4 text-green-600" />
@@ -415,7 +423,9 @@ export default function MainDashboard({
                           </div>
                           <div className="text-left">
                             <p className="font-medium text-sm text-slate-900">
-                              {transaction.receiver_name}
+                              {transaction.is_sent
+                                ? transaction.receiver_name
+                                : `${transaction.receiver_name} ${transaction.receiver_surname}`}
                             </p>
                             <p className="text-xs text-slate-500">
                               {formatDate(transaction.transaction_date)}
@@ -424,12 +434,12 @@ export default function MainDashboard({
                         </div>
                         <p
                           className={`font-bold text-sm ${
-                            transaction.amount < 0
+                            transaction.is_sent
                               ? "text-slate-900"
                               : "text-green-600"
                           }`}
                         >
-                          {transaction.amount < 0 ? "-" : "+"}
+                          {transaction.is_sent ? "-" : "+"}
                           {formatCurrency(Math.abs(transaction.amount))}
                         </p>
                       </div>
