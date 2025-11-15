@@ -59,6 +59,18 @@ export default function AIHelperPopup({ onClose, onSelectOption }: AIHelperPopup
             <p className="text-sm text-slate-600 mb-6">
               I can help you with transfers, account information, and more. What can I do for you?
             </p>
+            <div className="space-y-2 mb-4">
+              <button
+                onClick={() => handleOptionSelect('chatbot')}
+                className="w-full p-3 text-left bg-slate-50 hover:bg-yellow-50 rounded-lg transition-colors border border-slate-200 hover:border-yellow-400 flex items-center gap-3"
+              >
+                <MessageSquare className="w-5 h-5 text-yellow-400 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-slate-900">Chatbot</p>
+                  <p className="text-xs text-slate-500">Chat with AI</p>
+                </div>
+              </button>
+            </div>
             <div className="flex gap-3">
               <Button
                 onClick={onClose}
@@ -71,7 +83,7 @@ export default function AIHelperPopup({ onClose, onSelectOption }: AIHelperPopup
                 onClick={handleAccept}
                 className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-semibold"
               >
-                Help me
+                More options
               </Button>
             </div>
           </div>

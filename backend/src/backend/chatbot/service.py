@@ -16,6 +16,7 @@ from .schemas import (
     SuggestionInfo,
     TransactionData,
 )
+from .logger import logger
 
 
 class ChatbotService:
@@ -39,6 +40,7 @@ class ChatbotService:
             stage=ChatbotStage.INITIAL,
         )
         cls.sessions[session_id] = state
+        logger.info(f"📝 Created new chatbot session: {session_id} for user {user_id}")
         return state
 
     @classmethod
@@ -79,14 +81,22 @@ class ChatbotService:
         Returns:
             ChatbotMessageResponse
         """
+        logger.info(f"📨 Handling message for session {session_id}")
+        logger.info(f"   Message: {message or 'None'}")
+        logger.info(f"   Action: {action or 'None'}")
+        
         state = cls.get_session(session_id)
         if not state:
+            logger.warning(f"   ❌ Session not found: {session_id}")
             return ChatbotMessageResponse(
                 session_id=session_id,
                 stage=ChatbotStage.INITIAL,
                 message="Session not found. Please start a new conversation.",
                 buttons=None,
             )
+        
+        logger.info(f"   Current stage: {state.stage}")
+        logger.info(f"   User ID: {state.user_id}")
 
         # Handle based on current stage
         if state.stage == ChatbotStage.INITIAL:
@@ -121,6 +131,7 @@ class ChatbotService:
     def _handle_initial_stage(cls, state: ChatbotState, action: Optional[str]) -> ChatbotMessageResponse:
         """Handle initial stage: want suggestion?"""
         if action == "yes":
+            logger.info(f"   ✅ User wants suggestion, fetching first suggestions...")
             # Get first suggestions from MCP
             result = MCPClient.get_first_suggestions(state.user_id)
 
@@ -130,6 +141,7 @@ class ChatbotService:
             )
 
             if suggestion:
+                logger.info(f"   ➡️  Transitioning to FIRST_SUGGESTION stage")
                 state.stage = ChatbotStage.FIRST_SUGGESTION
                 state.first_suggestion = suggestion  # Store to avoid duplicate in filter suggestion
                 cls.update_session(state)
@@ -157,6 +169,7 @@ class ChatbotService:
                 )
 
         elif action == "no":
+            logger.info(f"   ✅ User declined suggestion, starting field collection")
             # Go straight to field collection
             state.stage = ChatbotStage.COLLECTING_FIELD_1
             cls.update_session(state)
@@ -238,11 +251,13 @@ class ChatbotService:
         }[state.stage]
 
         # Validate field
+        logger.info(f"   🔍 Validating field {field_number} ({MainAgent.FIELD_NAMES[field_number]})")
         is_valid, error_msg, processed_value = MainAgent.validate_and_store_field(
             field_number, message
         )
 
         if not is_valid:
+            logger.warning(f"   ❌ Field validation failed: {error_msg}")
             return ChatbotMessageResponse(
                 session_id=state.session_id,
                 stage=state.stage,
@@ -254,6 +269,7 @@ class ChatbotService:
         # Store the field
         field_name = MainAgent.FIELD_NAMES[field_number]
         setattr(state.transaction_data, field_name, processed_value)
+        logger.info(f"   ✅ Field {field_number} validated and stored: {processed_value}")
 
         # Check for filter suggestion (only once, and only if we have 2+ fields)
         fields_collected = sum(
@@ -269,6 +285,7 @@ class ChatbotService:
 
         filter_suggestion = None
         if not state.filter_suggestion_shown and fields_collected >= 2:
+            logger.info(f"🔄 Session {state.session_id}: Checking for filter suggestion (fields collected: {fields_collected})")
             filter_suggestion = SuggestionVerifierAgent.check_for_suggestion(
                 user_id=state.user_id,
                 recipient_account=state.transaction_data.recipient_account,
@@ -280,6 +297,7 @@ class ChatbotService:
 
         # If we found a confident filter suggestion, show it
         if filter_suggestion:
+            logger.info(f"   ✅ Filter suggestion found! Transitioning to FILTER_SUGGESTION stage")
             state.filter_suggestion_shown = True
             state.stage = ChatbotStage.FILTER_SUGGESTION
             cls.update_session(state)
@@ -303,6 +321,7 @@ class ChatbotService:
             }[field_number]
             state.stage = next_stage
             cls.update_session(state)
+            logger.info(f"   ➡️  Moving to next stage: {next_stage}")
 
             return ChatbotMessageResponse(
                 session_id=state.session_id,
@@ -313,6 +332,7 @@ class ChatbotService:
             )
         else:
             # All fields collected - run final check
+            logger.info("   ✅ All fields collected, running final check...")
             return cls._run_final_check(state)
 
     @classmethod
@@ -369,6 +389,7 @@ class ChatbotService:
     @classmethod
     def _run_final_check(cls, state: ChatbotState) -> ChatbotMessageResponse:
         """Run final validation check."""
+        logger.info(f"🔍 Running final validation check for session {state.session_id}")
         is_ok, problems = MainAgent.validate_complete_transaction(
             user_id=state.user_id,
             recipient_account=state.transaction_data.recipient_account,
@@ -378,6 +399,7 @@ class ChatbotService:
         )
 
         if is_ok:
+            logger.info(f"   ✅ Final check passed, transitioning to COMPLETED stage")
             # Everything is good - go to completion
             state.stage = ChatbotStage.COMPLETED
             cls.update_session(state)
@@ -391,6 +413,7 @@ class ChatbotService:
                 transaction_data=state.transaction_data,
             )
         else:
+            logger.warning(f"   ⚠️  Final check found problems, transitioning to FINAL_CHECK stage")
             # There are problems - ask user
             state.stage = ChatbotStage.FINAL_CHECK
             state.validation_problems = problems

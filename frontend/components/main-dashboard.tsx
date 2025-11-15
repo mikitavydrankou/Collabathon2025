@@ -8,9 +8,10 @@ import { Button } from '@/components/ui/button'
 import { Eye, EyeOff, Send, Plus, MessageCircle, Phone, FileText, Home, Newspaper, ShoppingCart, BarChart3, MoreVertical, HelpCircle } from 'lucide-react'
 import AIHelperPopup from '@/components/ai-helper-popup'
 import SendMoneyPage from '@/components/send-money-page'
-import ChatbotPage from '@/components/chatbot-page'
+import ChatbotScreen from '@/components/chatbot-screen'
 
 interface MainDashboardProps {
+  userData: any
   onLogout: () => void
   onNavigateTransaction?: () => void
 }
@@ -47,7 +48,7 @@ const accountsData = [
   },
 ]
 
-export default function MainDashboard({ onLogout, onNavigateTransaction }: MainDashboardProps) {
+export default function MainDashboard({ userData, onLogout, onNavigateTransaction }: MainDashboardProps) {
   const [showBalance, setShowBalance] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
   const [showAIHelper, setShowAIHelper] = useState(false)
@@ -80,7 +81,12 @@ export default function MainDashboard({ onLogout, onNavigateTransaction }: MainD
   }
 
   if (currentPage === 'chatbot') {
-    return <ChatbotPage onBack={() => setCurrentPage('dashboard')} />
+    return (
+      <ChatbotScreen
+        userId={userData?.user_id || 1}
+        onBack={() => setCurrentPage('dashboard')}
+      />
+    )
   }
 
   return (

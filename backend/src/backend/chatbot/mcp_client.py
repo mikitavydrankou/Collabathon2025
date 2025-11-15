@@ -9,6 +9,8 @@ from typing import Optional
 import httpx
 from pydantic import BaseModel, Field
 
+from .logger import logger
+
 
 # MCP Server URL from environment or default
 MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://localhost:8001")
@@ -72,6 +74,7 @@ class MCPClient:
         Returns:
             FirstSuggestionOutput with up to 5 transactions
         """
+        logger.info(f"📡 MCP Client: Calling first-suggestion for user {user_id}")
         client = MCPClient()
         try:
             response = client.client.post(
@@ -79,8 +82,11 @@ class MCPClient:
                 json={"user_id": user_id},
             )
             response.raise_for_status()
-            return FirstSuggestionOutput(**response.json())
+            result = FirstSuggestionOutput(**response.json())
+            logger.info(f"   ✅ Received {len(result.transactions)} transactions, balance: €{result.user_balance}")
+            return result
         except httpx.HTTPError as e:
+            logger.error(f"   ❌ MCP API error in first_suggestion: {str(e)}")
             raise Exception(f"MCP API error in first_suggestion: {str(e)}")
 
     @staticmethod
@@ -106,6 +112,8 @@ class MCPClient:
         Returns:
             FilterSuggestionOutput with matched transactions
         """
+        logger.info(f"📡 MCP Client: Calling filter-suggestion for user {user_id}")
+        logger.info(f"   Filters: name={recipient_name}, account={recipient_bank_account}, amount={amount}, title={title}")
         client = MCPClient()
         try:
             payload = {
@@ -126,8 +134,11 @@ class MCPClient:
                 json=payload,
             )
             response.raise_for_status()
-            return FilterSuggestionOutput(**response.json())
+            result = FilterSuggestionOutput(**response.json())
+            logger.info(f"   ✅ Found {result.match_count} matching transactions")
+            return result
         except httpx.HTTPError as e:
+            logger.error(f"   ❌ MCP API error in filter_suggestion: {str(e)}")
             raise Exception(f"MCP API error in filter_suggestion: {str(e)}")
 
     @staticmethod
@@ -151,6 +162,7 @@ class MCPClient:
         Returns:
             FinalCheckOutput with validation results
         """
+        logger.info(f"📡 MCP Client: Calling final-check for user {user_id}")
         client = MCPClient()
         try:
             response = client.client.post(
@@ -164,6 +176,9 @@ class MCPClient:
                 },
             )
             response.raise_for_status()
-            return FinalCheckOutput(**response.json())
+            result = FinalCheckOutput(**response.json())
+            logger.info(f"   ✅ Validation result: is_ok={result.is_ok}, problems={len(result.problems)}")
+            return result
         except httpx.HTTPError as e:
+            logger.error(f"   ❌ MCP API error in final_check: {str(e)}")
             raise Exception(f"MCP API error in final_check: {str(e)}")

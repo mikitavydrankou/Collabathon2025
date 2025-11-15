@@ -9,6 +9,7 @@ from typing import List, Optional, Tuple
 from .llm import call_llm, call_llm_with_json
 from .mcp_client import MCPClient, TransactionContext
 from .schemas import SuggestionInfo
+from .logger import logger
 
 
 class SuggestionAgent:
@@ -29,7 +30,13 @@ class SuggestionAgent:
         Returns:
             SuggestionInfo or None if no good suggestion
         """
+        logger.info("=" * 80)
+        logger.info("💡 SUGGESTION AGENT: Picking best first suggestion")
+        logger.info(f"   Transactions available: {len(transactions)}")
+        logger.info(f"   User balance: €{user_balance}")
+        
         if not transactions:
+            logger.warning("   ❌ No transactions available")
             return None
 
         # Prepare transaction data for LLM
@@ -70,6 +77,7 @@ Available transactions to suggest:
 
 Pick the BEST transaction to suggest. Consider what the user likely needs to pay now."""
 
+        logger.info("   🤖 Calling LLM to analyze transactions...")
         response = call_llm_with_json(system_prompt, user_prompt, temperature=0.3)
         result = json.loads(response)
 
@@ -78,14 +86,26 @@ Pick the BEST transaction to suggest. Consider what the user likely needs to pay
             selected_index = 0
 
         txn = transactions[selected_index]
+        confidence = float(result.get("confidence", 0.8))
+        reason = result.get("reason", f"Based on your past payment to {txn.recipient_name}.")
+
+        logger.info(f"   ✅ Selected transaction index: {selected_index}")
+        logger.info(f"      Recipient: {txn.recipient_name}")
+        logger.info(f"      Account: {txn.bank_account}")
+        logger.info(f"      Amount: €{txn.amount}")
+        logger.info(f"      Title: {txn.title}")
+        logger.info(f"      Temporal label: {txn.temporal_label}")
+        logger.info(f"      Confidence: {confidence * 100:.1f}%")
+        logger.info(f"      Reason: {reason}")
+        logger.info("=" * 80)
 
         return SuggestionInfo(
             recipient_name=txn.recipient_name,
             bank_account=txn.bank_account,
             amount=float(txn.amount),
             title=txn.title,
-            confidence=float(result.get("confidence", 0.8)),
-            reason=result.get("reason", f"Based on your past payment to {txn.recipient_name}."),
+            confidence=confidence,
+            reason=reason,
         )
 
     @staticmethod
@@ -161,20 +181,32 @@ Matching past transactions:
 
 Which transaction best matches the user's input? Only suggest if confidence >= 90%."""
 
+        logger.info(f"   🤖 Calling LLM to analyze {len(filtered_transactions)} filtered transactions...")
         response = call_llm_with_json(system_prompt, user_prompt, temperature=0.2)
         result = json.loads(response)
 
         selected_index = result.get("selected_index")
         confidence = float(result.get("confidence", 0.0))
+        reason = result.get("reason", "Matches your input.")
+
+        logger.info(f"   LLM response: selected_index={selected_index}, confidence={confidence * 100:.1f}%")
 
         # Only return if confidence >= 90%
         if selected_index is None or confidence < 0.90:
+            logger.info(f"   ❌ Confidence too low ({confidence * 100:.1f}% < 90%), not suggesting")
             return None
 
         if selected_index >= len(filtered_transactions):
+            logger.warning(f"   ❌ Invalid index {selected_index} (max: {len(filtered_transactions) - 1})")
             return None
 
         txn = filtered_transactions[selected_index]
+        logger.info(f"   ✅ Selected transaction:")
+        logger.info(f"      Recipient: {txn.recipient_name}")
+        logger.info(f"      Account: {txn.bank_account}")
+        logger.info(f"      Amount: €{txn.amount}")
+        logger.info(f"      Title: {txn.title}")
+        logger.info(f"      Reason: {reason}")
 
         return SuggestionInfo(
             recipient_name=txn.recipient_name,
@@ -182,7 +214,7 @@ Which transaction best matches the user's input? Only suggest if confidence >= 9
             amount=float(txn.amount),
             title=txn.title,
             confidence=confidence,
-            reason=result.get("reason", "Matches your input."),
+            reason=reason,
         )
 
 
@@ -217,14 +249,27 @@ class SuggestionVerifierAgent:
         Returns:
             SuggestionInfo or None
         """
+        logger.info("=" * 80)
+        logger.info("🔍 VERIFIER AGENT: Starting suggestion check")
+        logger.info(f"   User ID: {user_id}")
+        logger.info(f"   Fields provided:")
+        logger.info(f"     - Account: {recipient_account or 'None'}")
+        logger.info(f"     - Name: {recipient_name or 'None'}")
+        logger.info(f"     - Amount: {amount or 'None'}")
+        logger.info(f"     - Text: {transaction_text or 'None'}")
+        
         # Need at least 2 fields to make a suggestion
         fields_provided = sum(
             1 for f in [recipient_account, recipient_name, amount, transaction_text] if f is not None
         )
+        logger.info(f"   Fields provided count: {fields_provided}")
+        
         if fields_provided < 2:
+            logger.warning("   ❌ Not enough fields (need 2+), skipping suggestion check")
             return None
 
         # Call filter tool
+        logger.info("   📡 Calling MCP filter_suggestions tool...")
         result = MCPClient.filter_suggestions(
             user_id=user_id,
             recipient_name=recipient_name,
@@ -233,11 +278,28 @@ class SuggestionVerifierAgent:
             title=transaction_text,
             max_number=5,
         )
+        logger.info(f"   ✅ MCP returned {result.match_count} matching transactions")
+        logger.info(f"   Filters applied: {result.filters_applied}")
 
         # Use SuggestionAgent to analyze results
-        return SuggestionAgent.format_filter_suggestion(
+        logger.info("   🤖 Analyzing matches with LLM...")
+        suggestion = SuggestionAgent.format_filter_suggestion(
             result.matched_transactions, result.filters_applied, exclude_suggestion
         )
+        
+        if suggestion:
+            logger.info("   ✅ VERIFIER AGENT: Found confident suggestion!")
+            logger.info(f"      Recipient: {suggestion.recipient_name}")
+            logger.info(f"      Account: {suggestion.bank_account}")
+            logger.info(f"      Amount: €{suggestion.amount}")
+            logger.info(f"      Title: {suggestion.title}")
+            logger.info(f"      Confidence: {suggestion.confidence * 100:.1f}%")
+            logger.info(f"      Reason: {suggestion.reason}")
+        else:
+            logger.info("   ❌ VERIFIER AGENT: No confident suggestion (confidence < 90% or no matches)")
+        
+        logger.info("=" * 80)
+        return suggestion
 
 
 class MainAgent:
@@ -373,6 +435,15 @@ Parse the amount and return JSON:
         Returns:
             (is_ok, problems_list)
         """
+        logger.info("=" * 80)
+        logger.info("✅ MAIN AGENT: Running final transaction validation")
+        logger.info(f"   User ID: {user_id}")
+        logger.info(f"   Recipient: {recipient_name}")
+        logger.info(f"   Account: {recipient_account}")
+        logger.info(f"   Amount: €{amount}")
+        logger.info(f"   Description: {transaction_text}")
+        
+        logger.info("   📡 Calling MCP final_check tool...")
         result = MCPClient.final_check(
             user_id=user_id,
             recipient_name=recipient_name,
@@ -381,6 +452,14 @@ Parse the amount and return JSON:
             title=transaction_text,
         )
 
+        if result.is_ok:
+            logger.info("   ✅ Validation PASSED - No problems found")
+        else:
+            logger.warning(f"   ❌ Validation FAILED - Found {len(result.problems)} problem(s):")
+            for i, problem in enumerate(result.problems, 1):
+                logger.warning(f"      {i}. {problem}")
+        
+        logger.info("=" * 80)
         return result.is_ok, result.problems
 
     @staticmethod

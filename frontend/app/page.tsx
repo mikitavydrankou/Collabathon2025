@@ -53,6 +53,7 @@ export default function Home() {
 
   return (
     <MainDashboard
+      userData={userData}
       onLogout={handleLogout}
       onNavigateTransaction={() => setCurrentPage("transaction")}
     />
