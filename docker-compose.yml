@@ -26,8 +26,8 @@ services:
 
     mcp:
         build:
-            context: ./backend
-            dockerfile: Dockerfile.mcp
+            context: .
+            dockerfile: mcp_server/Dockerfile
         restart: always
         ports:
             - "8001:8001"

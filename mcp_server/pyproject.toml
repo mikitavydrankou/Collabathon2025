@@ -1,6 +1,6 @@
 [project]
-name = "backend"
-version = "0.1.0"
+name = "mcp-server"
+version = "1.0.0"
 requires-python = ">=3.10"
 dependencies = [
     "fastapi>=0.104.0",
@@ -9,25 +9,18 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "sqlalchemy>=2.0.44,<3.0.0",
     "pydantic>=2.0.0",
-    "numpy<2.0.0",
-    "langchain-core>=0.1.0",
-    "langchain-openai>=0.0.5",
-    "pytest (>=9.0.1,<10.0.0)",
-    "bcrypt>=4.0.0",
-    "passlib>=1.7.4",
-    "python-jose[cryptography]>=3.3.0",
+    "mcp>=1.0.0",
 ]
 
 [tool.poetry]
 packages = [
-    {include = "backend", from = "src"},
-    {include = "shared", from = ".."},
+    {include = "mcp_server", from = "."},
 ]
 
 [tool.poetry.scripts]
-start = "backend.main:start"
-dev = "backend.main:dev"
+mcp-server = "mcp_server.app:start"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
