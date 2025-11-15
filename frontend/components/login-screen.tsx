@@ -61,9 +61,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-slate-800 via-slate-700 to-slate-600">
-      {/* Header with Logo and User */}
       <div className="px-4 pt-4 pb-3">
-        {/* Logo at top center */}
         <div className="flex justify-center mb-3">
           <svg
             className="w-10 h-10"
