@@ -16,12 +16,21 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
 
   const handlePinInput = (digit: string) => {
     if (pin.length < 6) {
-      setPin(pin + digit);
+      const newPin = pin + digit;
+      setPin(newPin);
+
+      // Auto-login when PIN reaches 6 digits
+      if (newPin.length === 6) {
+        setTimeout(() => {
+          loginUser();
+        }, 300); // Small delay for visual feedback
+      }
     }
   };
 
   const handleDeletePin = () => {
     setPin(pin.slice(0, -1));
+    setError(""); // Clear error when user starts correcting
   };
 
   const handleBiometricClick = () => {
