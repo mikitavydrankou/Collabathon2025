@@ -1,17 +1,25 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import or_
-from backend.models import Transaction, User, SessionLocal
 import numpy as np
+from sqlalchemy import or_
+from sqlalchemy.orm import Session
+
+from backend.models import SessionLocal, Transaction, User
 
 ## Take all historical transactions for a specific user
 
+
 def filter_by_user(db: Session, user_id: int):
     return (
-        db.query(Transaction).filter(or_(Transaction.sender_id == user_id,
-                                         Transaction.receiver_id == user_id)
-                                         ).order_by(Transaction.transaction_date_and_time.desc()).all())
+        db.query(Transaction)
+        .filter(
+            or_(Transaction.sender_id == user_id, Transaction.receiver_id == user_id)
+        )
+        .order_by(Transaction.transaction_date_and_time.desc())
+        .all()
+    )
+
 
 ## Amount validation
+
 
 def is_amount_valid(db: Session, user_id: int, amount: float):
     user = db.get(User, user_id)
@@ -19,7 +27,7 @@ def is_amount_valid(db: Session, user_id: int, amount: float):
         raise ValueError(f"User with id {user_id} does not exist.")
 
     user_transactions = filter_by_user(db, user_id)
-    
+
     amounts = np.array([tx.amount for tx in user_transactions], dtype=float)
 
     q1 = np.percentile(amounts, 25)
@@ -34,7 +42,9 @@ def is_amount_valid(db: Session, user_id: int, amount: float):
     else:
         return {"valid": True, "suggestion": None}
 
+
 ## Bank number validation
+
 
 def is_bankNumber_valid(db: Session, user_id: int, bank_number: str):
     user = db.get(User, user_id)
@@ -42,13 +52,15 @@ def is_bankNumber_valid(db: Session, user_id: int, bank_number: str):
         raise ValueError(f"User with id {user_id} does not exist.")
 
     user_transactions = filter_by_user(db, user_id)
-    receiver_ids = [tx.receiver_id for tx in user_transactions if tx.receiver_id != user_id]
+    receiver_ids = [
+        tx.receiver_id for tx in user_transactions if tx.receiver_id != user_id
+    ]
 
-    previous_bank_numbers = db.query(User.bank_number).filter(User.user_id.in_(receiver_ids)).all()
-    previous_bank_numbers = [bn[0] for bn in previous_bank_numbers if bn[0] is not None]
+    # Get previous receivers with their bank numbers
+    previous_receivers = db.query(User).filter(User.user_id.in_(receiver_ids)).all()
 
-    if not previous_bank_numbers:
-        return {"valid": True, "suggestion": None}
+    if not previous_receivers:
+        return {"valid": True, "suggestion": None, "receiver_name": None}
 
     def equal_or_similar(bn1, bn2):
         bn1, bn2 = bn1.strip(), bn2.strip()
@@ -61,26 +73,41 @@ def is_bankNumber_valid(db: Session, user_id: int, bank_number: str):
             return "similar"
         return False
 
-    for bn in previous_bank_numbers:
-        res = equal_or_similar(bn, bank_number)
+    for receiver in previous_receivers:
+        if not receiver.bank_number:
+            continue
+
+        res = equal_or_similar(receiver.bank_number, bank_number)
         if res == "exact":
-            return {"valid": True, "suggestion": None}
-            
+            return {"valid": True, "suggestion": None, "receiver_name": None}
+
         elif res == "similar":
-            return {"valid": False, "suggestion": bn}
-        
-    return {"valid": True, "suggestion": None}
+            # Get receiver's full name
+            receiver_full_name = f"{receiver.name} {receiver.surname}".strip()
+            return {
+                "valid": False,
+                "suggestion": receiver.bank_number,
+                "receiver_name": receiver_full_name,
+            }
+
+    return {"valid": True, "suggestion": None, "receiver_name": None}
+
 
 ## Full name validation
 
-def is_fullname_valid(db: Session, sender_user_id: int, receiver_bank_number: str, fullname: str):
+
+def is_fullname_valid(
+    db: Session, sender_user_id: int, receiver_bank_number: str, fullname: str
+):
     """
     Validates if a given full name matches historical receiver names
     for the specified receiver bank number.
     """
 
     # 1. Find receiver user by bank number
-    receiver_user = db.query(User).filter(User.bank_number == receiver_bank_number).first()
+    receiver_user = (
+        db.query(User).filter(User.bank_number == receiver_bank_number).first()
+    )
 
     # If bank number not found → new receiver → valid
     if not receiver_user:
@@ -89,11 +116,11 @@ def is_fullname_valid(db: Session, sender_user_id: int, receiver_bank_number: st
     # 2. Get previous transactions between same sender → receiver
     user_transactions = (
         db.query(Transaction)
-            .filter(
-                Transaction.sender_id == sender_user_id,
-                Transaction.receiver_id == receiver_user.user_id
-            )
-            .all()
+        .filter(
+            Transaction.sender_id == sender_user_id,
+            Transaction.receiver_id == receiver_user.user_id,
+        )
+        .all()
     )
 
     # No previous transactions → new receiver → valid
@@ -111,12 +138,16 @@ def is_fullname_valid(db: Session, sender_user_id: int, receiver_bank_number: st
     # 4. Split the input
     parts = fullname.split()
     if len(parts) < 2:
-        return {"valid": False, "suggestion": f"{previous_firstnames[0]} {previous_lastnames[0]}"}
+        return {
+            "valid": False,
+            "suggestion": f"{previous_firstnames[0]} {previous_lastnames[0]}",
+        }
 
     first_name, last_name = parts[0].strip(), " ".join(parts[1:]).strip()
 
     # Helper to normalize comparison
-    def norm(s): return s.strip().lower()
+    def norm(s):
+        return s.strip().lower()
 
     # 5. Check normal order: First Last
     normal_first_ok = any(norm(fn) == norm(first_name) for fn in previous_firstnames)
@@ -139,16 +170,16 @@ def is_fullname_valid(db: Session, sender_user_id: int, receiver_bank_number: st
     return {"valid": False, "suggestion": suggestion}
 
 
-#if __name__ == "__main__":
+# if __name__ == "__main__":
 #    # Initialize database and seed if needed
 #    from backend.db import init_db
 #    from backend.seed import seed_database
-#    
+#
 #    print("Initializing database...")
 #    init_db()
 #    seed_database()
-    
-    # Test the function
+
+# Test the function
 #    db = SessionLocal()
 #    try:
 #        result = is_bankNumber_valid(db, 1, "4276555311412423")

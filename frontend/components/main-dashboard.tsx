@@ -1,102 +1,86 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-} from "recharts";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-  Eye,
-  EyeOff,
-  Send,
-  Plus,
-  MessageCircle,
-  Phone,
-  FileText,
-  Home,
-  Newspaper,
-  ShoppingCart,
-  BarChart3,
-  MoreVertical,
-  Bot,
-} from "lucide-react";
-import ChatbotScreen from "./chatbot-screen";
-import { apiClient } from "@/lib/api";
+import { useState } from 'react'
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Eye, EyeOff, Send, Plus, MessageCircle, Phone, FileText, Home, Newspaper, ShoppingCart, BarChart3, MoreVertical, HelpCircle } from 'lucide-react'
+import AIHelperPopup from '@/components/ai-helper-popup'
+import SendMoneyPage from '@/components/send-money-page'
+import ChatbotPage from '@/components/chatbot-page'
 
 interface MainDashboardProps {
-  onLogout: () => void;
+  onLogout: () => void
+  onNavigateTransaction?: () => void
 }
 
 const portfolioData = [
-  { name: "Accounts", value: 184587.65, color: "#1a1a2e" },
-  { name: "Loans", value: 45000, color: "#0f3460" },
-  { name: "Avails", value: 32000, color: "#e94560" },
-  { name: "Credit cards", value: 18000, color: "#c0c0c0" },
-  { name: "Investment products", value: 25000, color: "#4a90e2" },
-];
+  { name: 'Accounts', value: 184587.65, color: '#1a1a2e' },
+  { name: 'Loans', value: 45000, color: '#0f3460' },
+  { name: 'Avails', value: 32000, color: '#e94560' },
+  { name: 'Credit cards', value: 18000, color: '#c0c0c0' },
+  { name: 'Investment products', value: 25000, color: '#4a90e2' },
+]
 
 const currencyData = [
-  { currency: "EUR", balance: 2400, percentage: "2M10" },
-  { currency: "USD", balance: 4600, percentage: "465K" },
-  { currency: "CNH", balance: 2290, percentage: "32K" },
-  { currency: "CND", balance: 2000, percentage: "278K" },
-];
+  { currency: 'EUR', balance: 2400, percentage: '2M10' },
+  { currency: 'USD', balance: 4600, percentage: '465K' },
+  { currency: 'CNH', balance: 2290, percentage: '32K' },
+  { currency: 'CND', balance: 2000, percentage: '278K' },
+]
 
 const accountsData = [
   {
-    date: "07.02.2022",
-    name: "Current account",
-    iban: "DE57 3004 6098 0123 4567 90",
+    date: '07.02.2022',
+    name: 'Current account',
+    iban: 'DE57 3004 6098 0123 4567 90',
     balance: 269220.37,
-    type: "Accounts",
+    type: 'Accounts',
   },
   {
-    date: "21.09.2022",
-    name: "Current account",
-    iban: "DE57 7004 6048 0197 4567 20",
+    date: '21.09.2022',
+    name: 'Current account',
+    iban: 'DE57 7004 6048 0197 4567 20',
     balance: 38067.0,
-    type: "Accounts",
+    type: 'Accounts',
   },
-];
+]
 
-export default function MainDashboard({ onLogout }: MainDashboardProps) {
-  const [showBalance, setShowBalance] = useState(true);
-  const [activeTab, setActiveTab] = useState("overview");
-  const [showChatbot, setShowChatbot] = useState(false);
+export default function MainDashboard({ onLogout, onNavigateTransaction }: MainDashboardProps) {
+  const [showBalance, setShowBalance] = useState(true)
+  const [activeTab, setActiveTab] = useState('overview')
+  const [showAIHelper, setShowAIHelper] = useState(false)
+  const [currentPage, setCurrentPage] = useState<'dashboard' | 'send-money' | 'chatbot'>('dashboard')
+  const [supportLevel, setSupportLevel] = useState<'full' | 'partial' | 'none'>('none')
 
-  const totalBalance = 184587.65;
-  const userData = apiClient.getStoredUserData();
+  const totalBalance = 184587.65
 
-  if (showChatbot && userData) {
-    return (
-      <ChatbotScreen
-        userId={userData.user_id}
-        onBack={() => setShowChatbot(false)}
-        onConfirmPayment={(transactionData) => {
-          console.log("Payment confirmed:", transactionData);
-          alert("Payment confirmed! (In production, this would redirect to payment page)");
-          setShowChatbot(false);
-        }}
-      />
-    );
+  const handleAIOption = (option: string) => {
+    if (option === 'chatbot') {
+      setCurrentPage('chatbot')
+      setShowAIHelper(false)
+    } else if (option === 'full_support') {
+      setSupportLevel('full')
+      setCurrentPage('send-money')
+      setShowAIHelper(false)
+    } else if (option === 'partial_support') {
+      setSupportLevel('partial')
+      setCurrentPage('send-money')
+      setShowAIHelper(false)
+    } else if (option === 'no_support') {
+      setSupportLevel('none')
+      setCurrentPage('send-money')
+      setShowAIHelper(false)
+    }
+  }
+
+  if (currentPage === 'send-money') {
+    return <SendMoneyPage onBack={() => setCurrentPage('dashboard')} supportLevel={supportLevel} />
+  }
+
+  if (currentPage === 'chatbot') {
+    return <ChatbotPage onBack={() => setCurrentPage('dashboard')} />
   }
 
   return (
@@ -106,45 +90,29 @@ export default function MainDashboard({ onLogout }: MainDashboardProps) {
         {/* Greeting & Balance Card */}
         <Card className="bg-gradient-to-br from-white to-slate-50 border-0 shadow-sm">
           <CardContent className="pt-6">
-            <p className="text-sm text-slate-600 mb-2">
-              Total balance of all accounts:
-            </p>
+            <p className="text-sm text-slate-600 mb-2">Total balance of all accounts:</p>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-3xl font-bold text-slate-900">
-                {showBalance
-                  ? `${totalBalance.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}`
-                  : "••••••"}
+                {showBalance ? `${totalBalance.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}` : '••••••'}
               </h2>
               <button
                 onClick={() => setShowBalance(!showBalance)}
                 className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
               >
-                {showBalance ? (
-                  <Eye className="w-5 h-5 text-slate-600" />
-                ) : (
-                  <EyeOff className="w-5 h-5 text-slate-600" />
-                )}
+                {showBalance ? <Eye className="w-5 h-5 text-slate-600" /> : <EyeOff className="w-5 h-5 text-slate-600" />}
               </button>
             </div>
-            <p className="text-xs text-green-600 font-medium">
-              +5.345,25 EUR since last login
-            </p>
+            <p className="text-xs text-green-600 font-medium">+5.345,25 EUR since last login</p>
           </CardContent>
         </Card>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2 bg-slate-100 p-1 rounded-lg">
-            <TabsTrigger
-              value="overview"
-              className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
-            >
+            <TabsTrigger value="overview" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
               GPP Dashboard
             </TabsTrigger>
-            <TabsTrigger
-              value="financial"
-              className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
-            >
+            <TabsTrigger value="financial" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
               Financial overview
             </TabsTrigger>
           </TabsList>
@@ -179,13 +147,8 @@ export default function MainDashboard({ onLogout }: MainDashboardProps) {
                 <div className="grid grid-cols-2 gap-3 mt-4">
                   {portfolioData.map((item, idx) => (
                     <div key={idx} className="flex items-center gap-2">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: item.color }}
-                      />
-                      <span className="text-xs text-slate-600">
-                        {item.name}
-                      </span>
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                      <span className="text-xs text-slate-600">{item.name}</span>
                     </div>
                   ))}
                 </div>
@@ -199,20 +162,13 @@ export default function MainDashboard({ onLogout }: MainDashboardProps) {
               </CardHeader>
               <CardContent className="space-y-3">
                 {[
-                  { name: "Commerzbank", number: "329 1234567" },
-                  { name: "GmbH", number: "329 0987654" },
+                  { name: 'Commerzbank', number: '329 1234567' },
+                  { name: 'GmbH', number: '329 0987654' },
                 ].map((company, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
-                  >
+                  <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
                     <div>
-                      <p className="font-medium text-sm text-slate-900">
-                        {company.name}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        Customer number {company.number}
-                      </p>
+                      <p className="font-medium text-sm text-slate-900">{company.name}</p>
+                      <p className="text-xs text-slate-500">Customer number {company.number}</p>
                     </div>
                     <ChevronRightIcon className="w-4 h-4 text-slate-400" />
                   </div>
@@ -232,25 +188,12 @@ export default function MainDashboard({ onLogout }: MainDashboardProps) {
                 {accountsData.map((account, idx) => (
                   <div key={idx} className="p-3 bg-slate-50 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-slate-500">
-                        {account.date}
-                      </span>
-                      <span className="text-xs font-medium text-slate-600 bg-white px-2 py-1 rounded">
-                        {account.type}
-                      </span>
+                      <span className="text-xs text-slate-500">{account.date}</span>
+                      <span className="text-xs font-medium text-slate-600 bg-white px-2 py-1 rounded">{account.type}</span>
                     </div>
-                    <p className="font-medium text-sm text-slate-900 mb-1">
-                      {account.name}
-                    </p>
-                    <p className="text-xs text-slate-500 mb-2">
-                      {account.iban}
-                    </p>
-                    <p className="text-lg font-bold text-slate-900">
-                      {account.balance.toLocaleString("de-DE", {
-                        style: "currency",
-                        currency: "EUR",
-                      })}
-                    </p>
+                    <p className="font-medium text-sm text-slate-900 mb-1">{account.name}</p>
+                    <p className="text-xs text-slate-500 mb-2">{account.iban}</p>
+                    <p className="text-lg font-bold text-slate-900">{account.balance.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</p>
                   </div>
                 ))}
               </CardContent>
@@ -259,20 +202,14 @@ export default function MainDashboard({ onLogout }: MainDashboardProps) {
             {/* Currency Distribution */}
             <Card className="border-0 shadow-sm">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">
-                  Currency Distribution
-                </CardTitle>
+                <CardTitle className="text-base">Currency Distribution</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {currencyData.map((item, idx) => (
                   <div key={idx} className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-slate-900">
-                        {item.currency}
-                      </span>
-                      <span className="text-sm text-slate-500">
-                        {item.percentage}
-                      </span>
+                      <span className="text-sm font-medium text-slate-900">{item.currency}</span>
+                      <span className="text-sm text-slate-500">{item.percentage}</span>
                     </div>
                     <div className="w-full bg-slate-200 rounded-full h-2">
                       <div
@@ -289,36 +226,29 @@ export default function MainDashboard({ onLogout }: MainDashboardProps) {
 
         {/* Quick Actions */}
         <div>
-          <p className="text-sm font-semibold text-slate-900 mb-4">
-            What do you need?
-          </p>
+          <p className="text-sm font-semibold text-slate-900 mb-4">What do you need?</p>
           <div className="grid grid-cols-4 gap-3">
             {[
-              { icon: FileText, label: "Personal Loan", onClick: () => {} },
-              { icon: Bot, label: "Payment Helper", onClick: () => setShowChatbot(true) },
-              { icon: Phone, label: "Call", onClick: () => {} },
-              { icon: MoreVertical, label: "More", onClick: () => {} },
+              { icon: FileText, label: 'Personal Loan' },
+              { icon: MessageCircle, label: 'Chat' },
+              { icon: Phone, label: 'Call' },
+              { icon: MoreVertical, label: 'More' },
             ].map((action, idx) => (
               <button
                 key={idx}
-                onClick={action.onClick}
                 className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-slate-100 transition-colors group"
               >
                 <div className="w-12 h-12 rounded-full border-2 border-slate-300 flex items-center justify-center group-hover:border-yellow-400 transition-colors">
                   <action.icon className="w-5 h-5 text-slate-600 group-hover:text-yellow-400 transition-colors" />
                 </div>
-                <span className="text-xs text-center text-slate-600">
-                  {action.label}
-                </span>
+                <span className="text-xs text-center text-slate-600">{action.label}</span>
               </button>
             ))}
           </div>
         </div>
 
         {/* Farewell */}
-        <p className="text-center text-slate-600 text-sm py-4">
-          Everything done? Then we wish you a nice day.
-        </p>
+        <p className="text-center text-slate-600 text-sm py-4">Everything done? Then we wish you a nice day.</p>
 
         {/* Logout Button */}
         <Button
@@ -333,15 +263,16 @@ export default function MainDashboard({ onLogout }: MainDashboardProps) {
       <div className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800">
         <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-around">
           {[
-            { icon: Home, label: "Overview", active: true },
-            { icon: Newspaper, label: "News" },
-            { icon: ShoppingCart, label: "Orders" },
-            { icon: BarChart3, label: "Exchange" },
-            { icon: MoreVertical, label: "More" },
+            { icon: Home, label: 'Overview', active: true },
+            { icon: Send, label: 'Send Money', action: () => setCurrentPage('send-money') },
+            { icon: ShoppingCart, label: 'Orders', action: onNavigateTransaction },
+            { icon: BarChart3, label: 'Exchange' },
+            { icon: MoreVertical, label: 'More' },
           ].map((item, idx) => (
             <button
               key={idx}
-              className={`flex flex-col items-center gap-1 py-2 px-3 transition-colors ${item.active ? "text-yellow-400" : "text-slate-400 hover:text-slate-300"}`}
+              onClick={item.action}
+              className={`flex flex-col items-center gap-1 py-2 px-3 transition-colors ${item.active ? 'text-yellow-400' : 'text-slate-400 hover:text-slate-300'}`}
             >
               <item.icon className="w-5 h-5" />
               <span className="text-xs">{item.label}</span>
@@ -349,8 +280,21 @@ export default function MainDashboard({ onLogout }: MainDashboardProps) {
           ))}
         </div>
       </div>
+
+      <button
+        onClick={() => setShowAIHelper(true)}
+        className="fixed bottom-24 right-4 w-14 h-14 rounded-full bg-yellow-400 hover:bg-yellow-500 text-slate-900 flex items-center justify-center shadow-lg transition-all hover:scale-110 z-30"
+        title="Get help from AI"
+      >
+        <HelpCircle className="w-6 h-6" />
+      </button>
+
+      {/* AI Helper Popup */}
+      {showAIHelper && (
+        <AIHelperPopup onClose={() => setShowAIHelper(false)} onSelectOption={handleAIOption} />
+      )}
     </div>
-  );
+  )
 }
 
 function ChevronRightIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -369,5 +313,5 @@ function ChevronRightIcon(props: React.SVGProps<SVGSVGElement>) {
     >
       <polyline points="9 18 15 12 9 6"></polyline>
     </svg>
-  );
+  )
 }

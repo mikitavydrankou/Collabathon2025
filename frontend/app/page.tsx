@@ -3,12 +3,16 @@
 import { useState, useEffect } from "react";
 import LoginScreen from "@/components/login-screen";
 import MainDashboard from "@/components/main-dashboard";
+import UnifiedTransactionFlow from "@/components/unified-transaction-flow";
 import { apiClient } from "@/lib/api";
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState<"dashboard" | "transaction">(
+    "dashboard",
+  );
 
   useEffect(() => {
     const storedUserData = apiClient.getStoredUserData();
@@ -28,6 +32,7 @@ export default function Home() {
     apiClient.logout();
     setIsLoggedIn(false);
     setUserData(null);
+    setCurrentPage("dashboard");
   };
 
   if (isLoading) {
@@ -42,5 +47,14 @@ export default function Home() {
     return <LoginScreen onLogin={handleLogin} />;
   }
 
-  return <MainDashboard onLogout={handleLogout} />;
+  if (currentPage === "transaction") {
+    return <UnifiedTransactionFlow />;
+  }
+
+  return (
+    <MainDashboard
+      onLogout={handleLogout}
+      onNavigateTransaction={() => setCurrentPage("transaction")}
+    />
+  );
 }
