@@ -124,12 +124,6 @@ export default function TransactionConfirmation({
               <div className="text-5xl font-bold text-slate-900 mb-4">
                 {formatAmount(amount)}
               </div>
-              <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                <span className="text-sm text-slate-900 font-medium">
-                  Ready to send
-                </span>
-              </div>
             </CardContent>
           </Card>
 

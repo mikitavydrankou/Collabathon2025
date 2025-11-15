@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import TransactionConfirmation from "./transaction-confirmation";
 
 interface SendMoneyPageProps {
   onBack: () => void;
@@ -30,6 +31,7 @@ export default function SendMoneyPage({
   supportLevel = "none",
 }: SendMoneyPageProps) {
   const [currentFieldIndex, setCurrentFieldIndex] = useState(0);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   const [accountNumber, setAccountNumber] = useState("");
   const [recipientName, setRecipientName] = useState("");
@@ -360,11 +362,35 @@ export default function SendMoneyPage({
   };
 
   const handleSend = () => {
-    alert(
-      `Transfer of ${amount} PLN to ${recipientName} completed!\nAccount: ${accountNumber}\nDescription: ${title}`,
-    );
+    setShowConfirmation(true);
+  };
+
+  const handleConfirmTransaction = () => {
+    // Reset form and go back to dashboard
+    setAccountNumber("");
+    setRecipientName("");
+    setAmount("");
+    setTitle("");
+    setShowConfirmation(false);
     onBack();
   };
+
+  const handleBackFromConfirmation = () => {
+    setShowConfirmation(false);
+  };
+
+  if (showConfirmation) {
+    return (
+      <TransactionConfirmation
+        onBack={handleBackFromConfirmation}
+        onConfirm={handleConfirmTransaction}
+        accountNumber={accountNumber}
+        recipientName={recipientName}
+        amount={amount}
+        title={title}
+      />
+    );
+  }
 
   const quickAmounts = [10, 50, 100, 500];
 
