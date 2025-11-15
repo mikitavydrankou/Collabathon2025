@@ -81,6 +81,54 @@ export class ApiClient {
     const userData = localStorage.getItem("user_data");
     return userData ? JSON.parse(userData) : null;
   }
+
+  async startChatbot(userId: number): Promise<{
+    session_id: string;
+    message: string;
+    buttons: string[];
+  }> {
+    const response = await fetch(`${this.baseUrl}/chatbot/start`, {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ user_id: userId }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || "Failed to start chatbot");
+    }
+
+    return response.json();
+  }
+
+  async sendChatbotMessage(data: {
+    session_id?: string;
+    user_id: number;
+    message?: string;
+    action?: string;
+  }): Promise<{
+    session_id: string;
+    stage: string;
+    message: string;
+    buttons?: string[];
+    suggestion?: any;
+    transaction_data?: any;
+    show_confirm_payment: boolean;
+    validation_problems?: string[];
+  }> {
+    const response = await fetch(`${this.baseUrl}/chatbot/message`, {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || "Failed to send message");
+    }
+
+    return response.json();
+  }
 }
 
 export const apiClient = new ApiClient();

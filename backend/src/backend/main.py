@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from backend.auth import router as auth_router
+from backend.chatbot.routes import router as chatbot_router
 from sqlalchemy.orm import Session
 
 
@@ -34,6 +35,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(chatbot_router)
 
 
 @app.on_event("startup")

@@ -36,7 +36,10 @@ import {
   ShoppingCart,
   BarChart3,
   MoreVertical,
+  Bot,
 } from "lucide-react";
+import ChatbotScreen from "./chatbot-screen";
+import { apiClient } from "@/lib/api";
 
 interface MainDashboardProps {
   onLogout: () => void;
@@ -77,8 +80,24 @@ const accountsData = [
 export default function MainDashboard({ onLogout }: MainDashboardProps) {
   const [showBalance, setShowBalance] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
+  const [showChatbot, setShowChatbot] = useState(false);
 
   const totalBalance = 184587.65;
+  const userData = apiClient.getStoredUserData();
+
+  if (showChatbot && userData) {
+    return (
+      <ChatbotScreen
+        userId={userData.user_id}
+        onBack={() => setShowChatbot(false)}
+        onConfirmPayment={(transactionData) => {
+          console.log("Payment confirmed:", transactionData);
+          alert("Payment confirmed! (In production, this would redirect to payment page)");
+          setShowChatbot(false);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
@@ -275,13 +294,14 @@ export default function MainDashboard({ onLogout }: MainDashboardProps) {
           </p>
           <div className="grid grid-cols-4 gap-3">
             {[
-              { icon: FileText, label: "Personal Loan" },
-              { icon: MessageCircle, label: "Chat" },
-              { icon: Phone, label: "Call" },
-              { icon: MoreVertical, label: "More" },
+              { icon: FileText, label: "Personal Loan", onClick: () => {} },
+              { icon: Bot, label: "Payment Helper", onClick: () => setShowChatbot(true) },
+              { icon: Phone, label: "Call", onClick: () => {} },
+              { icon: MoreVertical, label: "More", onClick: () => {} },
             ].map((action, idx) => (
               <button
                 key={idx}
+                onClick={action.onClick}
                 className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-slate-100 transition-colors group"
               >
                 <div className="w-12 h-12 rounded-full border-2 border-slate-300 flex items-center justify-center group-hover:border-yellow-400 transition-colors">
