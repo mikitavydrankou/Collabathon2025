@@ -25,7 +25,7 @@ All agents use **LangChain with OpenAI** (gpt-4o-mini) for intelligent decision-
    - Collects 4 fields one by one:
      1. Recipient account number (basic validation)
      2. Recipient full name (LLM validates and formats properly)
-     3. Amount to transfer (LLM parses various formats: "€100", "100,50", "100 euros")
+     3. Amount to transfer (LLM parses various formats: "100 zł", "100.50", "100 pln")
      4. Transaction description
    - Uses LLM to explain validation problems in simple, neurodivergent-friendly language
    - Runs final check using MCP `final_check_tool`

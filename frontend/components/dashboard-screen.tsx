@@ -170,7 +170,7 @@ export default function DashboardScreen({ onLogout }: DashboardScreenProps) {
                   {Math.abs(transaction.amount).toLocaleString("pl-PL", {
                     minimumFractionDigits: 2,
                   })}{" "}
-                  PLN
+                  zł
                 </span>
               </div>
             ))}

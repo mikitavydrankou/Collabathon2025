@@ -44,7 +44,7 @@ export default function AccountCard({
         <span className="text-xl font-bold text-foreground">
           {hideBalance
             ? "•••"
-            : `${account.balance.toLocaleString("pl-PL", { minimumFractionDigits: 2 })} PLN`}
+            : `${account.balance.toLocaleString("pl-PL", { minimumFractionDigits: 2 })} zł`}
         </span>
         <span className="text-xs text-gray-500">{account.currency}</span>
       </div>

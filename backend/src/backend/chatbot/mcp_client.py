@@ -11,7 +11,6 @@ from pydantic import BaseModel, Field
 
 from .logger import logger
 
-
 # MCP Server URL from environment or default
 MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://localhost:8001")
 
@@ -83,7 +82,9 @@ class MCPClient:
             )
             response.raise_for_status()
             result = FirstSuggestionOutput(**response.json())
-            logger.info(f"   ✅ Received {len(result.transactions)} transactions, balance: €{result.user_balance}")
+            logger.info(
+                f"   ✅ Received {len(result.transactions)} transactions, balance:{result.user_balance} zł"
+            )
             return result
         except httpx.HTTPError as e:
             logger.error(f"   ❌ MCP API error in first_suggestion: {str(e)}")
@@ -113,7 +114,9 @@ class MCPClient:
             FilterSuggestionOutput with matched transactions
         """
         logger.info(f"📡 MCP Client: Calling filter-suggestion for user {user_id}")
-        logger.info(f"   Filters: name={recipient_name}, account={recipient_bank_account}, amount={amount}, title={title}")
+        logger.info(
+            f"   Filters: name={recipient_name}, account={recipient_bank_account}, amount={amount}, title={title}"
+        )
         client = MCPClient()
         try:
             payload = {
@@ -177,7 +180,9 @@ class MCPClient:
             )
             response.raise_for_status()
             result = FinalCheckOutput(**response.json())
-            logger.info(f"   ✅ Validation result: is_ok={result.is_ok}, problems={len(result.problems)}")
+            logger.info(
+                f"   ✅ Validation result: is_ok={result.is_ok}, problems={len(result.problems)}"
+            )
             return result
         except httpx.HTTPError as e:
             logger.error(f"   ❌ MCP API error in final_check: {str(e)}")

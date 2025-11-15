@@ -609,7 +609,7 @@ export default function SendMoneyPage({
                               : "bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-50"
                           }`}
                         >
-                          €{q}
+                          {q} zł
                         </button>
                       ))}
                     </div>
@@ -625,7 +625,7 @@ export default function SendMoneyPage({
                       <div className="flex justify-between text-sm">
                         <span className="text-slate-600">Amount:</span>
                         <span className="font-bold text-slate-900">
-                          €{amount}
+                          {amount} zł
                         </span>
                       </div>
                       <div className="flex justify-between text-sm">
@@ -732,7 +732,7 @@ export default function SendMoneyPage({
                     <div className="flex justify-between">
                       <span className="text-sm text-slate-600">Amount:</span>
                       <span className="font-bold text-slate-900">
-                        €{amount}
+                        {amount} zł
                       </span>
                     </div>
                     <div className="flex justify-between">

@@ -74,7 +74,7 @@ export default function ChatbotPage({ onBack }: ChatbotPageProps) {
         // Received recipient name
         setRecipientName(userInput);
         botResponse =
-          "Got it! How much would you like to send? (Please specify the amount in EUR)";
+          "Got it! How much would you like to send? (Please specify the amount in PLN)";
         setConversationStep(3);
         break;
 

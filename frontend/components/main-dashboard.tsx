@@ -236,7 +236,7 @@ export default function MainDashboard({
               </button>
             </div>
             <p className="text-xs text-green-600 font-medium">
-              +5,345.25 PLN since last login
+              +5,345.25 zł since last login
             </p>
           </CardContent>
         </Card>
