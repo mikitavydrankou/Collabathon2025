@@ -21,6 +21,8 @@ interface ValidationError {
   message: string;
   suggestion?: string;
   receiverName?: string;
+  userInput?: string;
+  errorPosition?: number;
 }
 
 export default function SendMoneyPage({
@@ -207,14 +209,42 @@ export default function SendMoneyPage({
     setValidationError(null);
 
     try {
-      let validationResult = { valid: true, suggestion: undefined };
+      let validationResult: {
+        valid: boolean;
+        suggestion?: string;
+        receiver_name?: string;
+        error_position?: number;
+      } = { valid: true, suggestion: undefined };
 
       // Validate based on current field
       if (currentFieldIndex === 0) {
         // Validate account number
-        validationResult = await validateBankNumber(accountNumber);
+        validationResult = (await validateBankNumber(accountNumber)) as any;
         if (!validationResult.valid) {
           const receiverName = (validationResult as any).receiver_name;
+          let errorPos = (validationResult as any).error_position;
+
+          // Fallback: calculate error position on frontend if backend doesn't provide it
+          if (errorPos === undefined || errorPos === null) {
+            const suggestion = validationResult.suggestion;
+            if (suggestion && accountNumber) {
+              for (
+                let i = 0;
+                i < Math.min(accountNumber.length, suggestion.length);
+                i++
+              ) {
+                if (accountNumber[i] !== suggestion[i]) {
+                  errorPos = i;
+                  break;
+                }
+              }
+            }
+          }
+
+          console.log("🔍 Validation Result:", validationResult);
+          console.log("📍 Error Position:", errorPos);
+          console.log("💡 Suggestion:", validationResult.suggestion);
+          console.log("👤 Receiver Name:", receiverName);
 
           // Save receiver name for auto-fill on next step
           if (receiverName) {
@@ -230,12 +260,17 @@ export default function SendMoneyPage({
                 : "This account number appears to be invalid.",
             suggestion: validationResult.suggestion,
             receiverName: receiverName,
+            userInput: accountNumber,
+            errorPosition: errorPos,
           });
           setHasSeenError(true);
         }
       } else if (currentFieldIndex === 1) {
         // Validate recipient name
-        validationResult = await validateFullname(recipientName, accountNumber);
+        validationResult = (await validateFullname(
+          recipientName,
+          accountNumber,
+        )) as any;
         if (!validationResult.valid) {
           setValidationError({
             field: "name",
@@ -249,7 +284,7 @@ export default function SendMoneyPage({
       } else if (currentFieldIndex === 2) {
         // Validate amount
         const amountValue = parseFloat(amount);
-        validationResult = await validateAmount(amountValue);
+        validationResult = (await validateAmount(amountValue)) as any;
         if (!validationResult.valid) {
           setValidationError({
             field: "amount",
@@ -437,16 +472,66 @@ export default function SendMoneyPage({
                             </p>
                             {validationError.receiverName ? (
                               <div className="space-y-2">
-                                <p className="text-sm text-yellow-800">
-                                  This account number looks similar to{" "}
-                                  <span className="font-bold text-yellow-900">
-                                    {validationError.receiverName}'s
-                                  </span>{" "}
-                                  account.
+                                <p className="text-xs text-yellow-800">
+                                  Similar to{" "}
+                                  <span className="font-bold">
+                                    {validationError.receiverName}
+                                  </span>
+                                  . Did you mean them?
                                 </p>
-                                <p className="text-sm text-yellow-800">
-                                  Did you mean to send to them?
-                                </p>
+                                {validationError.userInput &&
+                                  validationError.suggestion && (
+                                    <div className="bg-white rounded-md p-2 border border-yellow-200 space-y-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs text-yellow-700 font-medium w-12 shrink-0">
+                                          You:
+                                        </span>
+                                        <div className="font-mono text-xs leading-relaxed">
+                                          {validationError.userInput
+                                            .split("")
+                                            .map((char, idx) => (
+                                              <span
+                                                key={idx}
+                                                className={
+                                                  validationError.errorPosition !==
+                                                    undefined &&
+                                                  idx >=
+                                                    validationError.errorPosition
+                                                    ? "text-red-700 font-extrabold bg-red-100 border-b-[3px] border-red-600 px-px rounded-sm"
+                                                    : "text-slate-700"
+                                                }
+                                              >
+                                                {char}
+                                              </span>
+                                            ))}
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs text-green-700 font-medium w-12 shrink-0">
+                                          Them:
+                                        </span>
+                                        <div className="font-mono text-xs leading-relaxed">
+                                          {validationError.suggestion
+                                            .split("")
+                                            .map((char, idx) => (
+                                              <span
+                                                key={idx}
+                                                className={
+                                                  validationError.errorPosition !==
+                                                    undefined &&
+                                                  idx >=
+                                                    validationError.errorPosition
+                                                    ? "text-green-700 font-extrabold bg-green-100 border-b-[3px] border-green-600 px-px rounded-sm"
+                                                    : "text-slate-700"
+                                                }
+                                              >
+                                                {char}
+                                              </span>
+                                            ))}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
                               </div>
                             ) : (
                               <p className="text-sm text-yellow-800">
@@ -456,12 +541,12 @@ export default function SendMoneyPage({
                             {validationError.suggestion && (
                               <button
                                 onClick={applySuggestion}
-                                className="mt-3 px-3 py-1.5 text-sm font-semibold text-yellow-900 bg-yellow-100 hover:bg-yellow-200 rounded-md transition-colors"
+                                className="mt-2 px-2.5 py-1.5 text-xs font-semibold text-yellow-900 bg-yellow-100 hover:bg-yellow-200 rounded-md transition-colors"
                               >
                                 Use{" "}
                                 {validationError.receiverName
                                   ? "their"
-                                  : "suggested"}{" "}
+                                  : "correct"}{" "}
                                 account
                               </button>
                             )}

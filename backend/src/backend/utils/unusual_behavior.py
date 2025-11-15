@@ -60,37 +60,57 @@ def is_bankNumber_valid(db: Session, user_id: int, bank_number: str):
     previous_receivers = db.query(User).filter(User.user_id.in_(receiver_ids)).all()
 
     if not previous_receivers:
-        return {"valid": True, "suggestion": None, "receiver_name": None}
+        return {
+            "valid": True,
+            "suggestion": None,
+            "receiver_name": None,
+            "error_position": None,
+        }
 
     def equal_or_similar(bn1, bn2):
         bn1, bn2 = bn1.strip(), bn2.strip()
         if bn1 == bn2:
-            return "exact"
+            return {"match": "exact", "error_position": None}
         if len(bn1) != len(bn2):
-            return False
+            return {"match": False, "error_position": None}
         differences = sum(c1 != c2 for c1, c2 in zip(bn1, bn2))
         if differences <= 3:
-            return "similar"
-        return False
+            # Find the position of the first difference
+            error_position = next(
+                i for i, (c1, c2) in enumerate(zip(bn1, bn2)) if c1 != c2
+            )
+            return {"match": "similar", "error_position": error_position}
+        return {"match": False, "error_position": None}
 
     for receiver in previous_receivers:
         if not receiver.bank_number:
             continue
 
         res = equal_or_similar(receiver.bank_number, bank_number)
-        if res == "exact":
-            return {"valid": True, "suggestion": None, "receiver_name": None}
+        if res["match"] == "exact":
+            return {
+                "valid": True,
+                "suggestion": None,
+                "receiver_name": None,
+                "error_position": None,
+            }
 
-        elif res == "similar":
+        elif res["match"] == "similar":
             # Get receiver's full name
             receiver_full_name = f"{receiver.name} {receiver.surname}".strip()
             return {
                 "valid": False,
                 "suggestion": receiver.bank_number,
                 "receiver_name": receiver_full_name,
+                "error_position": res["error_position"],
             }
 
-    return {"valid": True, "suggestion": None, "receiver_name": None}
+    return {
+        "valid": True,
+        "suggestion": None,
+        "receiver_name": None,
+        "error_position": None,
+    }
 
 
 ## Full name validation
