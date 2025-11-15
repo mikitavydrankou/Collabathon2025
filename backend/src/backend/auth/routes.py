@@ -89,3 +89,20 @@ def get_me(current_user: User = Depends(get_current_user)):
         balance=float(current_user.balance),  # type: ignore
         bank_number=str(current_user.bank_number),  # type: ignore
     )
+
+
+@router.get("/user/{user_id}/balance")
+def get_user_balance(user_id: int, db: Session = Depends(get_db)):
+    """Get user balance by user_id"""
+    user = db.query(User).filter(User.user_id == user_id).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    return {
+        "user_id": int(user.user_id),  # type: ignore
+        "balance": float(user.balance),  # type: ignore
+    }

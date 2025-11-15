@@ -88,14 +88,30 @@ export default function MainDashboard({
   const [selectedTransaction, setSelectedTransaction] =
     useState<Transaction | null>(null);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
-
-  const totalBalance = 184587.65;
+  const [totalBalance, setTotalBalance] = useState<number>(0);
+  const [loadingBalance, setLoadingBalance] = useState(false);
 
   useEffect(() => {
     if (userData?.user_id) {
       fetchTransactions();
+      fetchBalance();
     }
   }, [userData]);
+
+  const fetchBalance = async () => {
+    setLoadingBalance(true);
+    try {
+      const response = await fetch(
+        `http://localhost:8000/auth/user/${userData.user_id}/balance`,
+      );
+      const data = await response.json();
+      setTotalBalance(data.balance || 0);
+    } catch (error) {
+      console.error("Error fetching balance:", error);
+    } finally {
+      setLoadingBalance(false);
+    }
+  };
 
   const fetchTransactions = async () => {
     setLoadingTransactions(true);
@@ -166,6 +182,7 @@ export default function MainDashboard({
         onBack={() => {
           setCurrentPage("dashboard");
           fetchTransactions(); // Refresh transactions after sending money
+          fetchBalance(); // Refresh balance after sending money
         }}
         supportLevel={supportLevel}
         userData={userData}
