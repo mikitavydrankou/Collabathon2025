@@ -61,8 +61,9 @@ class ChatbotService:
         return ChatbotMessageResponse(
             session_id=state.session_id,
             stage=ChatbotStage.INITIAL,
-            message="Hi! I can help you make a payment. Would you like to see a suggestion based on your past payments?",
-            buttons=["yes", "no"],
+            message="Hi! I see you usually make a payment around this time. Would you like to see your upcoming payment now?",
+            buttons=["show_me", "not_now"],
+            button_helper_text="If you tap Show my payment, you'll see a suggested payment based on your history. You can exit without making a payment by clicking decline on the next page",
             transaction_data=state.transaction_data,
         )
 
@@ -130,7 +131,7 @@ class ChatbotService:
     @classmethod
     def _handle_initial_stage(cls, state: ChatbotState, action: Optional[str]) -> ChatbotMessageResponse:
         """Handle initial stage: want suggestion?"""
-        if action == "yes":
+        if action == "show_me":
             logger.info(f"   ✅ User wants suggestion, fetching first suggestions...")
             # Get first suggestions from MCP
             result = MCPClient.get_first_suggestions(state.user_id)
@@ -168,7 +169,7 @@ class ChatbotService:
                     transaction_data=state.transaction_data,
                 )
 
-        elif action == "no":
+        elif action == "not_now":
             logger.info(f"   ✅ User declined suggestion, starting field collection")
             # Go straight to field collection
             state.stage = ChatbotStage.COLLECTING_FIELD_1
@@ -187,7 +188,8 @@ class ChatbotService:
             session_id=state.session_id,
             stage=state.stage,
             message="Please choose an option.",
-            buttons=["yes", "no"],
+            buttons=["show_me", "not_now"],
+            button_helper_text="If you tap Show my payment, you'll see a suggested payment based on your history. You can exit without making a payment by clicking decline on the next page",
             transaction_data=state.transaction_data,
         )
 

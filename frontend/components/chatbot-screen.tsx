@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Send, Mic, Camera, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/api";
 
@@ -16,6 +16,7 @@ interface ChatMessage {
   sender: "user" | "bot";
   message: string;
   buttons?: string[];
+  buttonHelperText?: string;
   suggestion?: any;
   showConfirmPayment?: boolean;
   validationProblems?: string[];
@@ -30,6 +31,12 @@ export default function ChatbotScreen({ userId, onBack, onConfirmPayment }: Chat
   const [transactionData, setTransactionData] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageIdCounter = useRef(0);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const chatInitialized = useRef(false);
 
   // Generate unique message ID
   const generateMessageId = () => {
@@ -46,6 +53,9 @@ export default function ChatbotScreen({ userId, onBack, onConfirmPayment }: Chat
   }, [messages]);
 
   useEffect(() => {
+    // Prevent double initialization in React Strict Mode
+    if (chatInitialized.current) return;
+    chatInitialized.current = true;
     startChat();
   }, []);
 
@@ -59,6 +69,7 @@ export default function ChatbotScreen({ userId, onBack, onConfirmPayment }: Chat
         sender: "bot",
         message: response.message,
         buttons: response.buttons,
+        buttonHelperText: response.button_helper_text,
       });
     } catch (error: any) {
       addMessage({
@@ -75,13 +86,21 @@ export default function ChatbotScreen({ userId, onBack, onConfirmPayment }: Chat
     setMessages((prev) => [...prev, message]);
   };
 
+  const formatButtonText = (action: string): string => {
+    // Convert snake_case to Title Case
+    return action
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
   const handleButtonClick = async (action: string) => {
     if (!sessionId) return;
 
     addMessage({
       id: generateMessageId(),
       sender: "user",
-      message: action.charAt(0).toUpperCase() + action.slice(1),
+      message: formatButtonText(action),
     });
 
     setIsLoading(true);
@@ -145,6 +164,7 @@ export default function ChatbotScreen({ userId, onBack, onConfirmPayment }: Chat
       sender: "bot",
       message: response.message,
       buttons: response.buttons,
+      buttonHelperText: response.button_helper_text,
       suggestion: response.suggestion,
       showConfirmPayment: response.show_confirm_payment,
       validationProblems: response.validation_problems,
@@ -161,6 +181,104 @@ export default function ChatbotScreen({ userId, onBack, onConfirmPayment }: Chat
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm'
+      });
+      
+      audioChunksRef.current = [];
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+      
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        await transcribeAudio(audioBlob);
+        
+        // Stop all tracks to release microphone
+        stream.getTracks().forEach(track => track.stop());
+      };
+      
+      mediaRecorderRef.current = mediaRecorder;
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (error: any) {
+      console.error("Error accessing microphone:", error);
+      alert("Could not access microphone. Please check permissions.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const transcribeAudio = async (audioBlob: Blob) => {
+    setIsProcessing(true);
+    try {
+      const result = await apiClient.transcribeAudio(audioBlob);
+      if (result.success && result.text) {
+        setInputValue(result.text);
+      }
+    } catch (error: any) {
+      console.error("Transcription error:", error);
+      addMessage({
+        id: generateMessageId(),
+        sender: "bot",
+        message: `Transcription failed: ${error.message}`,
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCameraClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImageCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsProcessing(true);
+    try {
+      const result = await apiClient.extractTextFromImage(file);
+      if (result.success && result.text) {
+        // Append OCR text to existing input or replace it
+        const newText = inputValue 
+          ? `${inputValue}\n\n[From image: ${result.text}]`
+          : result.text;
+        setInputValue(newText);
+      } else if (result.message) {
+        addMessage({
+          id: generateMessageId(),
+          sender: "bot",
+          message: result.message,
+        });
+      }
+    } catch (error: any) {
+      console.error("OCR error:", error);
+      addMessage({
+        id: generateMessageId(),
+        sender: "bot",
+        message: `Image processing failed: ${error.message}`,
+      });
+    } finally {
+      setIsProcessing(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -248,17 +366,25 @@ export default function ChatbotScreen({ userId, onBack, onConfirmPayment }: Chat
 
             {/* Button options */}
             {msg.buttons && msg.buttons.length > 0 && (
-              <div className="mt-3 flex gap-2 flex-wrap ml-2">
-                {msg.buttons.map((btn) => (
-                  <Button
-                    key={btn}
-                    onClick={() => handleButtonClick(btn)}
-                    disabled={isLoading}
-                    className="bg-slate-700 hover:bg-slate-800 text-white rounded-full px-6 py-2 text-sm font-medium shadow-md"
-                  >
-                    {btn.charAt(0).toUpperCase() + btn.slice(1)}
-                  </Button>
-                ))}
+              <div className="mt-3 ml-2">
+                <div className="flex gap-2 flex-wrap">
+                  {msg.buttons.map((btn) => (
+                    <Button
+                      key={btn}
+                      onClick={() => handleButtonClick(btn)}
+                      disabled={isLoading}
+                      className="bg-slate-700 hover:bg-slate-800 text-white rounded-full px-6 py-2 text-sm font-medium shadow-md"
+                    >
+                      {formatButtonText(btn)}
+                    </Button>
+                  ))}
+                </div>
+                {/* Helper text under buttons */}
+                {msg.buttonHelperText && (
+                  <p className="text-xs text-slate-500 mt-3 px-1 leading-relaxed">
+                    {msg.buttonHelperText}
+                  </p>
+                )}
               </div>
             )}
 
@@ -299,6 +425,57 @@ export default function ChatbotScreen({ userId, onBack, onConfirmPayment }: Chat
 
       {/* Input area */}
       <div className="bg-white border-t border-slate-200 px-4 py-4">
+        {/* Hidden file input for camera */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleImageCapture}
+          className="hidden"
+        />
+        
+        {/* Camera and Microphone buttons */}
+        <div className="flex gap-2 mb-3">
+          <button
+            onClick={handleCameraClick}
+            disabled={isLoading || isProcessing || isRecording}
+            className="flex-1 px-4 py-3 border-2 border-slate-300 rounded-full hover:border-slate-700 hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            title="Take photo to extract text"
+          >
+            <Camera size={20} className="text-slate-700" />
+            <span className="text-sm font-medium text-slate-700">
+              {isProcessing && !isRecording ? "Processing..." : "Camera"}
+            </span>
+          </button>
+          
+          <button
+            onClick={isRecording ? stopRecording : startRecording}
+            disabled={isLoading || isProcessing}
+            className={`flex-1 px-4 py-3 border-2 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+              isRecording
+                ? "border-red-500 bg-red-50 hover:bg-red-100"
+                : "border-slate-300 hover:border-slate-700 hover:bg-slate-50"
+            }`}
+            title={isRecording ? "Stop recording" : "Record voice message"}
+          >
+            {isRecording ? (
+              <>
+                <Square size={20} className="text-red-600 animate-pulse" />
+                <span className="text-sm font-medium text-red-600">Stop</span>
+              </>
+            ) : (
+              <>
+                <Mic size={20} className="text-slate-700" />
+                <span className="text-sm font-medium text-slate-700">
+                  {isProcessing && !isRecording ? "Processing..." : "Voice"}
+                </span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Text input and send button */}
         <div className="flex gap-2">
           <input
             type="text"
@@ -306,12 +483,12 @@ export default function ChatbotScreen({ userId, onBack, onConfirmPayment }: Chat
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Type your message..."
-            disabled={isLoading}
+            disabled={isLoading || isRecording}
             className="flex-1 px-4 py-3 border-2 border-slate-300 rounded-full focus:outline-none focus:border-slate-700 focus:ring-2 focus:ring-slate-200 transition-all text-slate-900 placeholder:text-slate-400 disabled:bg-slate-100"
           />
           <button
             onClick={handleSendMessage}
-            disabled={!inputValue.trim() || isLoading}
+            disabled={!inputValue.trim() || isLoading || isRecording}
             className="bg-yellow-400 hover:bg-yellow-500 text-slate-900 rounded-full p-3 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
           >
             <Send size={20} />

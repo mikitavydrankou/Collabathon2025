@@ -74,7 +74,8 @@ class ChatbotMessageResponse(BaseModel):
     session_id: str
     stage: ChatbotStage
     message: str = Field(..., description="Message to display to user")
-    buttons: Optional[List[str]] = Field(None, description="Button options (e.g., ['yes', 'no'])")
+    buttons: Optional[List[str]] = Field(None, description="Button options (e.g., ['show_me', 'not_now'])")
+    button_helper_text: Optional[str] = Field(None, description="Helper text to show under buttons")
     suggestion: Optional[SuggestionInfo] = Field(None, description="Transaction suggestion if any")
     transaction_data: Optional[TransactionData] = Field(None, description="Current collected data")
     show_confirm_payment: bool = Field(default=False, description="Whether to show confirm payment button")
@@ -93,3 +94,4 @@ class StartChatResponse(BaseModel):
     session_id: str
     message: str
     buttons: List[str]
+    button_helper_text: Optional[str] = None

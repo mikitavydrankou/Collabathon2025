@@ -86,6 +86,7 @@ export class ApiClient {
     session_id: string;
     message: string;
     buttons: string[];
+    button_helper_text?: string;
   }> {
     const response = await fetch(`${this.baseUrl}/chatbot/start`, {
       method: "POST",
@@ -111,6 +112,7 @@ export class ApiClient {
     stage: string;
     message: string;
     buttons?: string[];
+    button_helper_text?: string;
     suggestion?: any;
     transaction_data?: any;
     show_confirm_payment: boolean;
@@ -125,6 +127,55 @@ export class ApiClient {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.detail || "Failed to send message");
+    }
+
+    return response.json();
+  }
+
+  async transcribeAudio(audioBlob: Blob): Promise<{
+    text: string;
+    success: boolean;
+  }> {
+    const formData = new FormData();
+    formData.append("audio", audioBlob, "audio.webm");
+
+    const token = localStorage.getItem("access_token");
+    const response = await fetch(`${this.baseUrl}/chatbot/transcribe`, {
+      method: "POST",
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || "Failed to transcribe audio");
+    }
+
+    return response.json();
+  }
+
+  async extractTextFromImage(imageBlob: Blob): Promise<{
+    text: string;
+    success: boolean;
+    message?: string;
+  }> {
+    const formData = new FormData();
+    formData.append("image", imageBlob, "image.jpg");
+
+    const token = localStorage.getItem("access_token");
+    const response = await fetch(`${this.baseUrl}/chatbot/ocr`, {
+      method: "POST",
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || "Failed to extract text from image");
     }
 
     return response.json();
