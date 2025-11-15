@@ -1,47 +1,63 @@
 "use client";
 
 import { useState } from "react";
-import { Eye, EyeOff, HelpCircle, Settings, Fingerprint } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { HelpCircle, Settings, Fingerprint, Delete } from "lucide-react";
 import { apiClient } from "@/lib/api";
+import FaceIdButton from "@/components/face-id-button";
 
 interface LoginScreenProps {
   onLogin: (userData: any) => void;
 }
 
 export default function LoginScreen({ onLogin }: LoginScreenProps) {
-  const [showPassword, setShowPassword] = useState(false);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
+  const [pin, setPin] = useState("");
   const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [showBiometricModal, setShowBiometricModal] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!username || !password) return;
+  const handlePinInput = (digit: string) => {
+    if (pin.length < 6) {
+      setPin(pin + digit);
+    }
+  };
 
-    setIsLoading(true);
+  const handleDeletePin = () => {
+    setPin(pin.slice(0, -1));
+  };
+
+  const handleBiometricClick = () => {
+    setShowBiometricModal(true);
+  };
+
+  const loginUser = async () => {
     setError("");
 
     try {
-      const data = await apiClient.login({ username, password });
+      // Always login as alex.brown with password123
+      const credentials = { username: "alex.brown", password: "password123" };
+
+      const data = await apiClient.login(credentials);
       localStorage.setItem("access_token", data.access_token);
       localStorage.setItem("user_data", JSON.stringify(data));
       onLogin(data);
     } catch (err: any) {
-      setError(err.message || "An error occurred during login");
-    } finally {
-      setIsLoading(false);
+      setError(err.message || "Authentication failed");
+      setShowBiometricModal(false);
     }
+  };
+
+  const handleBiometricSuccess = async () => {
+    await loginUser();
+    setShowBiometricModal(false);
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-slate-800 via-slate-700 to-slate-600">
-      <div className="flex-1 flex flex-col items-center justify-center px-4 pt-20 pb-12">
-        <div className="mb-12">
+      {/* Header with Logo and User */}
+      <div className="px-4 pt-4 pb-3">
+        {/* Logo at top center */}
+        <div className="flex justify-center mb-3">
           <svg
-            className="w-20 h-20"
+            className="w-10 h-10"
             viewBox="0 0 100 100"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
@@ -61,98 +77,152 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
           </svg>
         </div>
 
-        <h1 className="text-white text-center">
-          <p className="text-lg font-light tracking-wide mb-2">Welcome to</p>
-          <p className="text-4xl font-bold">Commerzbank</p>
-        </h1>
-      </div>
-
-      <div className="flex-1 bg-slate-50 rounded-t-3xl px-6 py-10 shadow-2xl flex flex-col justify-start">
-        <form onSubmit={handleLogin} className="space-y-6">
-          <div>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Username / Participant Number"
-              className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:outline-none focus:border-slate-700 focus:ring-2 focus:ring-slate-200 transition-all text-slate-900 placeholder:text-slate-400 font-medium"
-            />
-          </div>
-
-          <div>
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password / PIN"
-                className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:outline-none focus:border-slate-700 focus:ring-2 focus:ring-slate-200 transition-all text-slate-900 placeholder:text-slate-400 font-medium"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
-          </div>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
-              {error}
-            </div>
-          )}
-
-          <div className="text-right">
-            <button
-              type="button"
-              className="text-slate-600 hover:text-slate-800 text-sm font-medium transition-colors"
-            >
-              Forgot credentials
-            </button>
-          </div>
-
+        {/* User and Welcome Message Side by Side */}
+        <div className="flex items-center justify-between gap-4">
+          {/* User Info on Left */}
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setRememberMe(!rememberMe)}
-              className={`w-6 h-6 rounded-full border-2 transition-all flex items-center justify-center ${
-                rememberMe
-                  ? "bg-slate-300 border-slate-300"
-                  : "border-slate-300 hover:border-slate-400"
-              }`}
-            >
-              {rememberMe && (
-                <div className="w-2 h-2 bg-slate-500 rounded-full" />
-              )}
-            </button>
-            <label className="text-sm text-slate-600 cursor-pointer font-medium">
-              Remember user data
-            </label>
+            <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center shadow-xl flex-shrink-0">
+              <span className="text-slate-900 text-base font-bold">AB</span>
+            </div>
+            <div className="text-left">
+              <h2 className="text-white text-sm font-bold leading-tight">
+                Alex Brown
+              </h2>
+              <p className="text-slate-300 text-xs font-medium">Welcome back</p>
+            </div>
           </div>
 
-          <Button
-            type="submit"
-            disabled={!username || !password || isLoading}
-            className="w-full bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-bold py-3 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
-          >
-            {isLoading ? "Logging in..." : "Login"}
-          </Button>
-        </form>
-
-        <div className="flex justify-center gap-8 mt-10 pt-8 border-t border-slate-200">
-          <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors hover:bg-slate-100 rounded-lg">
-            <HelpCircle size={24} />
-          </button>
-          <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors hover:bg-slate-100 rounded-lg">
-            <Settings size={24} />
-          </button>
-          <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors hover:bg-slate-100 rounded-lg">
-            <Fingerprint size={24} />
-          </button>
+          {/* Welcome Message on Right */}
+          <div className="text-right">
+            <p className="text-xs font-light tracking-wide text-slate-300 mb-0.5">
+              Welcome to
+            </p>
+            <p className="text-lg font-bold tracking-tight text-white">
+              Commerzbank
+            </p>
+          </div>
         </div>
       </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 bg-slate-50 rounded-t-[2rem] px-5 pb-3 shadow-2xl flex flex-col">
+        {/* Spacer to push content down */}
+        <div className="flex-1" />
+
+        {/* PIN Display */}
+        <div className="mb-6">
+          <p className="text-center text-slate-700 text-sm font-semibold mb-2">
+            Enter your PIN
+          </p>
+          <div className="flex justify-center gap-2.5">
+            {[0, 1, 2, 3, 4, 5].map((index) => (
+              <div
+                key={index}
+                className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                  index < pin.length
+                    ? "bg-slate-900 scale-125 shadow-md"
+                    : "bg-slate-300"
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+
+        {error && (
+          <div className="bg-red-50 border-2 border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm mb-4 text-center font-medium">
+            {error}
+          </div>
+        )}
+
+        {/* PIN Pad */}
+        <div className="grid grid-cols-3 gap-2.5 w-full max-w-[280px] mx-auto mb-6">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
+            <button
+              key={digit}
+              onClick={() => handlePinInput(digit.toString())}
+              className="aspect-square bg-white hover:bg-slate-50 active:bg-slate-100 border-2 border-slate-200 rounded-full text-slate-900 text-xl font-bold transition-all shadow-lg hover:shadow-xl active:scale-95 active:shadow-md"
+              type="button"
+            >
+              {digit}
+            </button>
+          ))}
+          <div className="aspect-square" />
+          <button
+            onClick={() => handlePinInput("0")}
+            className="aspect-square bg-white hover:bg-slate-50 active:bg-slate-100 border-2 border-slate-200 rounded-full text-slate-900 text-xl font-bold transition-all shadow-lg hover:shadow-xl active:scale-95 active:shadow-md"
+            type="button"
+          >
+            0
+          </button>
+          <button
+            onClick={handleDeletePin}
+            className="aspect-square bg-white hover:bg-slate-50 active:bg-slate-100 border-2 border-slate-200 rounded-full text-slate-600 transition-all shadow-lg hover:shadow-xl active:scale-95 active:shadow-md flex items-center justify-center"
+            type="button"
+          >
+            <Delete size={22} strokeWidth={2.5} />
+          </button>
+        </div>
+
+        {/* Spacer to push footer down */}
+        <div className="flex-1" />
+
+        {/* Quick Actions */}
+        <div className="flex justify-center items-center gap-8 pt-3 border-t-2 border-slate-200">
+          <button
+            type="button"
+            className="p-2 text-slate-400 hover:text-slate-600 transition-all hover:bg-slate-100 rounded-xl active:scale-95"
+          >
+            <HelpCircle size={26} strokeWidth={2} />
+          </button>
+          <button
+            type="button"
+            onClick={handleBiometricClick}
+            className="p-4 bg-gradient-to-br from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-white transition-all rounded-3xl border-2 border-yellow-300 shadow-2xl hover:shadow-3xl active:scale-95"
+          >
+            <Fingerprint size={38} strokeWidth={2.5} />
+          </button>
+          <button
+            type="button"
+            className="p-2 text-slate-400 hover:text-slate-600 transition-all hover:bg-slate-100 rounded-xl active:scale-95"
+          >
+            <Settings size={26} strokeWidth={2} />
+          </button>
+        </div>
+
+        <p className="text-center text-slate-500 text-xs font-medium mt-2">
+          Use Face ID for quick access
+        </p>
+      </div>
+
+      {/* Biometric Modal Overlay */}
+      {showBiometricModal && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 animate-in fade-in duration-300">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-md"
+            onClick={() => setShowBiometricModal(false)}
+          />
+          <div className="relative bg-slate-800 rounded-3xl p-8 mx-4 shadow-2xl animate-in slide-in-from-top duration-500 max-w-sm w-full">
+            <div className="text-center mb-6">
+              <h3 className="text-white text-xl font-semibold mb-2">Face ID</h3>
+              <p className="text-slate-300 text-sm">
+                Authenticating as Alex Brown...
+              </p>
+            </div>
+            <div className="flex justify-center">
+              <FaceIdButton
+                onAuthSuccess={handleBiometricSuccess}
+                autoStart={true}
+              />
+            </div>
+            <button
+              onClick={() => setShowBiometricModal(false)}
+              className="mt-6 text-slate-400 hover:text-white text-sm transition-colors w-full"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
