@@ -1,5 +1,7 @@
 # EasyFocus Assistant
 
+> **Team Beszketnyky** | Collabathon 2025 for Commerzbank
+
 **AI-powered banking companion for everyone who needs a helping hand.**
 
 **Live Demo:** http://68.183.76.153:3000/
