@@ -185,7 +185,7 @@ Remember: only accept transactions with similarity_score > 0.7"""
             text = transaction.get("transaction_text", "")
             similarity = transaction.get("similarity_score", 0)
             
-            formatted += f"{i}. {receiver} - {amount} UAH\n"
+            formatted += f"{i}. {receiver} - {amount} PLN\n"
             formatted += f"   Description: {text}\n"
             formatted += f"   Similarity: {similarity*100:.0f}%\n"
         

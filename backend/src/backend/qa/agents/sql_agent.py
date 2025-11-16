@@ -210,7 +210,7 @@ Analyze whether these results can answer the user's question."""
         """Format database results into readable text."""
         if function_name == "get_user_balance":
             balance = data.get("balance", 0)
-            return f"Your current balance: {balance} UAH"
+            return f"Your current balance: {balance} PLN"
         
         if isinstance(data, list):
             if len(data) == 0:
@@ -221,7 +221,7 @@ Analyze whether these results can answer the user's question."""
                 receiver = transaction.get("receiver_name", "Unknown")
                 amount = transaction.get("amount", 0)
                 text = transaction.get("transaction_text", "")
-                formatted += f"{i}. {receiver} - {amount} UAH ({text})\n"
+                formatted += f"{i}. {receiver} - {amount} PLN ({text})\n"
             
             return formatted
         
