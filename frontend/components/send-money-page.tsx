@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import TransactionConfirmation from "./transaction-confirmation";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 interface SendMoneyPageProps {
   onBack: () => void;
   supportLevel?: "full" | "partial" | "none";
@@ -189,19 +191,16 @@ export default function SendMoneyPage({
       // Remove spaces before validation
       const cleanedBankNumber = bankNumber.replace(/\s/g, "");
 
-      const response = await fetch(
-        "http://localhost:8000/validate_bank_number",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            user_id: userId,
-            bank_number: cleanedBankNumber,
-          }),
+      const response = await fetch(`${API_BASE_URL}/validate_bank_number`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          user_id: userId,
+          bank_number: cleanedBankNumber,
+        }),
+      });
 
       if (!response.ok) {
         throw new Error("Validation failed");
@@ -223,7 +222,7 @@ export default function SendMoneyPage({
       // Remove spaces before validation
       const cleanedBankNumber = bankNumber.replace(/\s/g, "");
 
-      const response = await fetch("http://localhost:8000/validate_fullname", {
+      const response = await fetch(`${API_BASE_URL}/validate_fullname`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -251,7 +250,7 @@ export default function SendMoneyPage({
     amount: number,
   ): Promise<{ valid: boolean; suggestion?: string }> => {
     try {
-      const response = await fetch("http://localhost:8000/validate_amount", {
+      const response = await fetch(`${API_BASE_URL}/validate_amount`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

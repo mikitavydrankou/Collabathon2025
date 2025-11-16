@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 import {
   Card,
   CardContent,
@@ -145,7 +147,7 @@ export default function MainDashboard({
     setLoadingBalance(true);
     try {
       const response = await fetch(
-        `http://localhost:8000/auth/user/${userData.user_id}/balance`,
+        `${API_BASE_URL}/auth/user/${userData.user_id}/balance`,
       );
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -164,7 +166,7 @@ export default function MainDashboard({
     setLoadingTransactions(true);
     try {
       const response = await fetch(
-        `http://localhost:8000/transactions/${userData.user_id}?limit=10`,
+        `${API_BASE_URL}/transactions/${userData.user_id}?limit=10`,
       );
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
