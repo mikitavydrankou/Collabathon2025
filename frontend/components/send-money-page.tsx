@@ -93,7 +93,7 @@ export default function SendMoneyPage({
     {
       name: "accountNumber",
       label: "Account Number (IBAN)",
-      placeholder: "DE89 3704 0044 0532...",
+      placeholder: "3389 3704 0044 0532",
       hint: "Enter the recipient IBAN",
       value: accountNumber,
       setValue: setAccountNumber,
