@@ -37,21 +37,54 @@ export default function TransactionConfirmation({
     }).format(num);
   };
 
-  const formatIBAN = (iban: string) => {
-    // Format IBAN with spaces for better readability
-    return iban.replace(/(.{4})/g, "$1 ").trim();
-  };
-
   const handleConfirm = async () => {
     setIsProcessing(true);
     setError(null);
 
     try {
       // Split recipient name into first and last name
-      const nameParts = recipientName.trim().split(/\s+/);
-      const receiver_name = nameParts[0] || "";
+      const nameParts = recipientName
+        .trim()
+        .split(/\s+/)
+        .filter((part) => part.length > 0);
+      const receiver_name = (nameParts[0] || "").trim();
       const receiver_surname =
-        nameParts.slice(1).join(" ") || nameParts[0] || "";
+        nameParts.length > 1 ? nameParts.slice(1).join(" ").trim() : "";
+
+      console.log("👤 Name parsing debug:");
+      console.log("  - Original recipientName:", recipientName);
+      console.log("  - After trim:", recipientName.trim());
+      console.log("  - Name parts:", nameParts);
+      console.log("  - receiver_name:", receiver_name);
+      console.log("  - receiver_surname:", receiver_surname);
+
+      // Validate that we have both name and surname
+      if (!receiver_name || !receiver_surname) {
+        throw new Error("Please enter both first name and last name");
+      }
+
+      // Clean account number (remove spaces)
+      const cleanAccountNumber = accountNumber.replace(/\s+/g, "");
+
+      // Parse amount (remove any formatting like spaces, commas)
+      const cleanAmount = amount.replace(/[^\d.-]/g, "");
+      const parsedAmount = parseFloat(cleanAmount);
+
+      // Validate parsed amount
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        throw new Error("Invalid amount");
+      }
+
+      const requestBody = {
+        user_id: userId,
+        receiver_bank_number: cleanAccountNumber,
+        receiver_name: receiver_name,
+        receiver_surname: receiver_surname,
+        amount: parsedAmount,
+        transaction_text: title || `Transfer to ${recipientName}`,
+      };
+
+      console.log("🚀 Sending transaction request:", requestBody);
 
       // Call the real API
       const response = await fetch(
@@ -61,20 +94,22 @@ export default function TransactionConfirmation({
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            user_id: userId,
-            receiver_bank_number: accountNumber,
-            receiver_name: receiver_name,
-            receiver_surname: receiver_surname,
-            amount: parseFloat(amount),
-            transaction_text: title || `Transfer to ${recipientName}`,
-          }),
+          body: JSON.stringify(requestBody),
         },
       );
 
-      const data = await response.json();
+      console.log("📡 Response status:", response.status, response.statusText);
 
-      if (!response.ok || !data.success) {
+      const data = await response.json();
+      console.log("📦 Response data:", data);
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || `HTTP ${response.status}: ${response.statusText}`,
+        );
+      }
+
+      if (!data.success) {
         throw new Error(data.message || "Transaction failed");
       }
 
@@ -85,6 +120,7 @@ export default function TransactionConfirmation({
         onConfirm();
       }, 1500);
     } catch (err) {
+      console.error("❌ Transaction error:", err);
       setError(
         err instanceof Error
           ? err.message
@@ -183,10 +219,10 @@ export default function TransactionConfirmation({
               {/* Account Number */}
               <div className="space-y-1">
                 <p className="text-xs text-slate-500 uppercase tracking-wide">
-                  Account Number (IBAN)
+                  Account Number
                 </p>
                 <p className="text-base font-mono text-slate-900 break-all">
-                  {formatIBAN(accountNumber)}
+                  {accountNumber}
                 </p>
               </div>
 

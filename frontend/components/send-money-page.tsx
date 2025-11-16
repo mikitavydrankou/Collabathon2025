@@ -62,13 +62,23 @@ export default function SendMoneyPage({
   // Get user ID from userData or fallback to 1
   const userId = userData?.user_id || 1;
 
+  // Format IBAN with spaces after every 4 characters
+  const formatIBAN = (value: string) => {
+    // Remove all spaces and non-digit characters
+    const cleaned = value.replace(/\s/g, "");
+    // Add space after every 4 characters
+    const formatted = cleaned.match(/.{1,4}/g)?.join(" ") || cleaned;
+    return formatted;
+  };
+
   // Restore draft from localStorage on mount
   useEffect(() => {
     const draftStr = localStorage.getItem("transferDraft");
     if (draftStr) {
       try {
         const draft = JSON.parse(draftStr);
-        if (draft.accountNumber) setAccountNumber(draft.accountNumber);
+        if (draft.accountNumber)
+          setAccountNumber(formatIBAN(draft.accountNumber));
         if (draft.recipientName) setRecipientName(draft.recipientName);
         if (draft.amount) setAmount(draft.amount);
         if (draft.title) setTitle(draft.title);
@@ -92,7 +102,7 @@ export default function SendMoneyPage({
   const fields = [
     {
       name: "accountNumber",
-      label: "Account Number (IBAN)",
+      label: "Account Number",
       placeholder: "3389 3704 0044 0532",
       hint: "Enter the recipient IBAN",
       value: accountNumber,
@@ -146,6 +156,9 @@ export default function SendMoneyPage({
     receiver_name?: string;
   }> => {
     try {
+      // Remove spaces before validation
+      const cleanedBankNumber = bankNumber.replace(/\s/g, "");
+
       const response = await fetch(
         "http://localhost:8000/validate_bank_number",
         {
@@ -155,7 +168,7 @@ export default function SendMoneyPage({
           },
           body: JSON.stringify({
             user_id: userId,
-            bank_number: bankNumber,
+            bank_number: cleanedBankNumber,
           }),
         },
       );
@@ -173,10 +186,13 @@ export default function SendMoneyPage({
   };
 
   const validateFullname = async (
-    fullname: string,
     bankNumber: string,
+    fullname: string,
   ): Promise<{ valid: boolean; suggestion?: string }> => {
     try {
+      // Remove spaces before validation
+      const cleanedBankNumber = bankNumber.replace(/\s/g, "");
+
       const response = await fetch("http://localhost:8000/validate_fullname", {
         method: "POST",
         headers: {
@@ -184,8 +200,8 @@ export default function SendMoneyPage({
         },
         body: JSON.stringify({
           user_id: userId,
-          bank_number: bankNumber,
-          fullname: fullname,
+          bank_number: cleanedBankNumber,
+          fullname,
         }),
       });
 
@@ -309,8 +325,8 @@ export default function SendMoneyPage({
       } else if (currentFieldIndex === 1) {
         // Validate recipient name
         validationResult = (await validateFullname(
-          recipientName,
           accountNumber,
+          recipientName,
         )) as any;
         if (!validationResult.valid) {
           setValidationError({
@@ -378,7 +394,13 @@ export default function SendMoneyPage({
   };
 
   const handleFieldChange = (value: string) => {
-    currentField.setValue(value);
+    // Format IBAN for account number field
+    if (currentField.name === "accountNumber") {
+      const formatted = formatIBAN(value);
+      currentField.setValue(formatted);
+    } else {
+      currentField.setValue(value);
+    }
     // Reset validation error when user changes the field
     if (validationError && validationError.field === currentField.name) {
       setValidationError(null);
@@ -388,7 +410,12 @@ export default function SendMoneyPage({
 
   const applySuggestion = () => {
     if (validationError?.suggestion) {
-      currentField.setValue(validationError.suggestion);
+      // Format IBAN suggestion for account number field
+      const value =
+        currentFieldIndex === 0
+          ? formatIBAN(validationError.suggestion)
+          : validationError.suggestion;
+      currentField.setValue(value);
 
       // If applying bank number suggestion, save the receiver name for next step
       if (currentFieldIndex === 0 && validationError.receiverName) {
@@ -518,6 +545,10 @@ export default function SendMoneyPage({
                       onChange={(e) => handleFieldChange(e.target.value)}
                       placeholder={currentField.placeholder}
                       className={`w-full px-4 py-3 border-2 rounded-lg text-base font-medium transition-all focus:outline-none focus:ring-4 bg-white ${
+                        currentField.name === "accountNumber"
+                          ? "font-mono tracking-wider"
+                          : ""
+                      } ${
                         validationError &&
                         validationError.field === currentField.name
                           ? "border-yellow-500 focus:ring-yellow-200"
@@ -664,6 +695,12 @@ export default function SendMoneyPage({
                           {recipientName}
                         </span>
                       </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-600">Account:</span>
+                        <span className="font-mono text-xs text-slate-900 tracking-wider">
+                          {accountNumber}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -755,9 +792,21 @@ export default function SendMoneyPage({
                     <input
                       type={field.type || "text"}
                       value={field.value}
-                      onChange={(e) => field.setValue(e.target.value)}
+                      onChange={(e) => {
+                        // Apply IBAN formatting for account number field
+                        if (field.name === "accountNumber") {
+                          const formatted = formatIBAN(e.target.value);
+                          field.setValue(formatted);
+                        } else {
+                          field.setValue(e.target.value);
+                        }
+                      }}
                       placeholder={field.placeholder}
                       className={`w-full px-4 py-3 border-2 rounded-lg text-base transition-all focus:outline-none bg-white ${
+                        field.name === "accountNumber"
+                          ? "font-mono tracking-wider"
+                          : ""
+                      } ${
                         showDraftRestored && field.value
                           ? "border-green-500 focus:border-green-600 animate-pulse"
                           : "border-slate-200 focus:border-yellow-400 hover:border-slate-300"
@@ -806,7 +855,7 @@ export default function SendMoneyPage({
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-slate-600">Account:</span>
-                      <span className="text-mono text-xs text-slate-600">
+                      <span className="font-mono text-xs text-slate-600 tracking-wider">
                         {accountNumber}
                       </span>
                     </div>
