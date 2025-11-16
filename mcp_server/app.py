@@ -17,11 +17,17 @@ from .schemas import (
     FinalCheckOutput,
     FirstSuggestionInput,
     FirstSuggestionOutput,
+    RAGQueryInput,
+    RAGQueryOutput,
+    SQLQueryInput,
+    SQLQueryOutput,
 )
 from .tools import (
     filter_suggestion_tool,
     final_check_tool,
     first_suggestion_tool,
+    rag_query_tool,
+    sql_query_tool,
 )
 
 app = FastAPI(
@@ -102,6 +108,34 @@ async def final_check(input_data: FinalCheckInput):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/tools/sql-query", response_model=SQLQueryOutput)
+async def sql_query(input_data: SQLQueryInput):
+    """
+    Execute SQL queries for transaction analysis.
+    
+    Supports various functions like get_recent_transactions, filter_transactions,
+    get_time_based_transactions, get_recipient_patterns, and get_user_balance.
+    """
+    try:
+        return sql_query_tool(input_data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/tools/rag-query", response_model=RAGQueryOutput)
+async def rag_query(input_data: RAGQueryInput):
+    """
+    Search for similar transactions using semantic search (RAG).
+    
+    Uses ChromaDB with OpenAI embeddings to find transactions similar
+    to the query text.
+    """
+    try:
+        return rag_query_tool(input_data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/")
 async def root():
     """Root endpoint with service information."""
@@ -114,6 +148,8 @@ async def root():
             "first_suggestion": "/tools/first-suggestion",
             "filter_suggestion": "/tools/filter-suggestion",
             "final_check": "/tools/final-check",
+            "sql_query": "/tools/sql-query",
+            "rag_query": "/tools/rag-query",
         },
     }
 

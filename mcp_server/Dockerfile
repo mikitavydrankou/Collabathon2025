@@ -11,6 +11,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy shared directory (needed by mcp_server)
 COPY shared /app/shared
 
+# Copy backend directory (needed for RAG initialization)
+COPY backend/src/backend /app/backend/src/backend
+
 # Copy mcp_server pyproject.toml and install dependencies
 COPY mcp_server/pyproject.toml /app/mcp_server/
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
@@ -24,8 +27,8 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
 # Copy mcp_server application code
 COPY mcp_server /app/mcp_server
 
-# Set Python path to include both mcp_server and shared
-ENV PYTHONPATH=/app:/app/mcp_server
+# Set Python path to include mcp_server, shared, and backend
+ENV PYTHONPATH=/app:/app/mcp_server:/app/backend/src
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1

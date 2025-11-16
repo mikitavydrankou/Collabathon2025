@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.auth import router as auth_router
 from backend.chatbot.routes import router as chatbot_router
 from backend.db import init_db, test_connection
+from backend.qa.routes import router as qa_router
 from backend.seed import seed_database
 from backend.transactions.routes import router as transactions_router
 from backend.utils.routes import router as utils_router
@@ -20,6 +21,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(chatbot_router)
+app.include_router(qa_router)
 app.include_router(transactions_router)
 app.include_router(utils_router)
 

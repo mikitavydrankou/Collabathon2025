@@ -1,15 +1,23 @@
 """
-MCP tool implementations for money transfer assistance.
+MCP tool implementations for money transfer assistance and QA chatbot.
 
 These tools provide structured data and insights for LLM agents to analyze and make decisions.
 All outputs are designed for LLM consumption, not direct UI display.
 """
 
+import os
+import sys
+from pathlib import Path
 from datetime import datetime
 from decimal import Decimal
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
+from dotenv import load_dotenv
+
+# Add backend to path for imports
+project_root = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(project_root / "backend" / "src"))
 
 from shared.models import Transaction, User
 
@@ -29,8 +37,43 @@ from .schemas import (
     FinalCheckOutput,
     FirstSuggestionInput,
     FirstSuggestionOutput,
+    RAGQueryInput,
+    RAGQueryOutput,
+    SQLQueryInput,
+    SQLQueryOutput,
     TransactionContext,
 )
+
+load_dotenv()
+
+# Initialize RAG retriever (lazy loading)
+_rag_retriever = None
+
+def get_rag_retriever():
+    """Get or initialize RAG retriever instance with auto-initialization."""
+    global _rag_retriever
+    if _rag_retriever is None:
+        try:
+            # Import and initialize the retriever
+            backend_qa_path = project_root / "backend" / "src" / "backend" / "qa"
+            sys.path.insert(0, str(backend_qa_path))
+            
+            from rag.retriever import TransactionRetriever
+            chroma_path = backend_qa_path / "rag" / "chroma_store"
+            
+            # Initialize with auto_initialize=True to create embeddings if needed
+            print(f"Initializing RAG retriever from {chroma_path}...")
+            _rag_retriever = TransactionRetriever(
+                chroma_db_path=str(chroma_path),
+                auto_initialize=True  # Will create embeddings if they don't exist
+            )
+            print("✅ RAG retriever initialized successfully")
+        except Exception as e:
+            print(f"❌ Could not initialize RAG retriever: {e}")
+            import traceback
+            traceback.print_exc()
+            _rag_retriever = None
+    return _rag_retriever
 
 
 def _transaction_to_context(
@@ -275,6 +318,177 @@ def final_check_tool(input_data: FinalCheckInput) -> FinalCheckOutput:
         db.close()
 
 
+def sql_query_tool(input_data: SQLQueryInput) -> SQLQueryOutput:
+    """
+    Execute SQL queries for transaction analysis.
+    
+    Supports functions:
+    - get_recent_transactions: Get recent transactions for user
+    - filter_transactions: Filter transactions by criteria
+    - get_time_based_transactions: Get transactions from specific time periods
+    - get_recipient_patterns: Analyze recipient patterns
+    - get_user_balance: Get current user balance
+    
+    Args:
+        input_data: Contains user_id, function_name, and parameters
+    
+    Returns:
+        SQLQueryOutput with success status and query results
+    """
+    db = get_db()
+    try:
+        function_name = input_data.function_name
+        params = input_data.parameters.copy()
+        params["user_id"] = input_data.user_id
+        
+        result_data = None
+        
+        if function_name == "get_recent_transactions":
+            limit = params.get("limit", 10)
+            transactions = get_recent_transactions(db, input_data.user_id, limit)
+            result_data = [
+                {
+                    "transaction_id": t.transaction_id,
+                    "receiver_name": f"{t.receiver_name} {t.receiver_surname}",
+                    "amount": float(t.amount),
+                    "transaction_text": t.transaction_text or "",
+                    "transaction_date": t.transaction_date_and_time.isoformat(),
+                    "transaction_posted": t.transaction_posted,
+                }
+                for t in transactions
+            ]
+            
+        elif function_name == "filter_transactions":
+            recipient_name = params.get("recipient_name")
+            amount = Decimal(str(params["amount"])) if "amount" in params else None
+            title = params.get("title")
+            limit = params.get("limit", 10)
+            
+            transactions = filter_transactions(
+                db, input_data.user_id, recipient_name, None, amount, title, limit
+            )
+            result_data = [
+                {
+                    "transaction_id": t.transaction_id,
+                    "receiver_name": f"{t.receiver_name} {t.receiver_surname}",
+                    "amount": float(t.amount),
+                    "transaction_text": t.transaction_text or "",
+                    "transaction_date": t.transaction_date_and_time.isoformat(),
+                    "transaction_posted": t.transaction_posted,
+                }
+                for t in transactions
+            ]
+            
+        elif function_name == "get_time_based_transactions":
+            time_transactions = get_time_based_transactions(db, input_data.user_id)
+            result_data = [
+                {
+                    "transaction_id": t.transaction_id,
+                    "receiver_name": f"{t.receiver_name} {t.receiver_surname}",
+                    "amount": float(t.amount),
+                    "transaction_text": t.transaction_text or "",
+                    "transaction_date": t.transaction_date_and_time.isoformat(),
+                    "time_label": label,
+                }
+                for t, label in time_transactions
+            ]
+            
+        elif function_name == "get_recipient_patterns":
+            patterns = get_recipient_patterns(db, input_data.user_id)
+            result_data = patterns
+            
+        elif function_name == "get_user_balance":
+            balance = get_user_balance(db, input_data.user_id)
+            result_data = {
+                "balance": float(balance) if balance else 0.0,
+                "currency": "UAH"
+            }
+            
+        else:
+            return SQLQueryOutput(
+                success=False,
+                data=None,
+                error=f"Unknown function: {function_name}",
+                function_used=function_name,
+            )
+        
+        return SQLQueryOutput(
+            success=True,
+            data=result_data,
+            error=None,
+            function_used=function_name,
+        )
+        
+    except Exception as e:
+        return SQLQueryOutput(
+            success=False,
+            data=None,
+            error=str(e),
+            function_used=input_data.function_name,
+        )
+    finally:
+        db.close()
+
+
+def rag_query_tool(input_data: RAGQueryInput) -> RAGQueryOutput:
+    """
+    Search for similar transactions using RAG (semantic search).
+    
+    Uses ChromaDB with OpenAI embeddings to find transactions similar
+    to the query text.
+    
+    Args:
+        input_data: Contains user_id, query text, and top_k
+    
+    Returns:
+        RAGQueryOutput with success status and similar transactions
+    """
+    try:
+        retriever = get_rag_retriever()
+        if retriever is None:
+            return RAGQueryOutput(
+                success=False,
+                data=[],
+                count=0,
+                query=input_data.query,
+                error="RAG retriever not initialized. Please check ChromaDB setup."
+            )
+        
+        # Perform similarity search
+        results = retriever.retrieve(input_data.query, k=input_data.top_k)
+        
+        # Format results for agents
+        formatted_results = [
+            {
+                "transaction_id": r["transaction_id"],
+                "receiver_name": r["recipient_name"],
+                "amount": r["amount"],
+                "transaction_text": r["transaction_text"],
+                "transaction_date": r["date"],
+                "similarity_score": r["similarity"],
+                "rank": r["rank"],
+            }
+            for r in results
+        ]
+        
+        return RAGQueryOutput(
+            success=True,
+            data=formatted_results,
+            count=len(formatted_results),
+            query=input_data.query,
+            error=None,
+        )
+        
+    except Exception as e:
+        return RAGQueryOutput(
+            success=False,
+            data=[],
+            count=0,
+            query=input_data.query,
+            error=str(e),
+        )
+
+
 # Tool registry for MCP server
 TOOLS = {
     "first_suggestion_tool": {
@@ -294,5 +508,17 @@ TOOLS = {
         "input_schema": FinalCheckInput,
         "output_schema": FinalCheckOutput,
         "description": "Validate transaction: returns is_ok (true/false) and list of problems if any",
+    },
+    "sql_query_tool": {
+        "function": sql_query_tool,
+        "input_schema": SQLQueryInput,
+        "output_schema": SQLQueryOutput,
+        "description": "Execute SQL queries for transaction analysis (recent transactions, filters, time-based, patterns, balance)",
+    },
+    "rag_query_tool": {
+        "function": rag_query_tool,
+        "input_schema": RAGQueryInput,
+        "output_schema": RAGQueryOutput,
+        "description": "Search for similar transactions using semantic search (RAG with ChromaDB embeddings)",
     },
 }

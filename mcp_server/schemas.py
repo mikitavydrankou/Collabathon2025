@@ -6,7 +6,7 @@ All outputs are designed for LLM consumption - structured data with context.
 
 from datetime import datetime
 from decimal import Decimal
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -146,3 +146,68 @@ class FinalCheckOutput(BaseModel):
     )
     user_balance: Decimal = Field(..., description="Current user balance for context")
     amount_to_send: Decimal = Field(..., description="Amount being validated")
+
+
+class SQLQueryInput(BaseModel):
+    """Input for sql_query_tool."""
+
+    user_id: int = Field(..., description="ID of the user making the query")
+    function_name: str = Field(
+        ...,
+        description="Name of the SQL function to execute: get_recent_transactions, filter_transactions, get_time_based_transactions, get_recipient_patterns, or get_user_balance",
+    )
+    parameters: Dict[str, Any] = Field(
+        default_factory=dict, description="Parameters for the SQL function"
+    )
+
+
+class SQLQueryOutput(BaseModel):
+    """
+    Output for sql_query_tool.
+
+    Returns query results with success status and error information.
+    """
+
+    success: bool = Field(..., description="True if query executed successfully")
+    data: Optional[Any] = Field(
+        None, description="Query results (list of transactions, dict, or other data structure)"
+    )
+    error: Optional[str] = Field(None, description="Error message if success=False")
+    function_used: str = Field(..., description="Name of the function that was executed")
+
+
+class RAGQueryInput(BaseModel):
+    """Input for rag_query_tool."""
+
+    user_id: int = Field(..., description="ID of the user making the query")
+    query: str = Field(..., description="Search query text for semantic similarity search")
+    top_k: int = Field(
+        default=3, description="Number of similar transactions to return (default: 3)"
+    )
+
+    @field_validator("top_k")
+    @classmethod
+    def validate_top_k(cls, v: int) -> int:
+        """Ensure top_k is positive and reasonable."""
+        if v < 1:
+            raise ValueError("top_k must be at least 1")
+        if v > 20:
+            raise ValueError("top_k cannot exceed 20")
+        return v
+
+
+class RAGQueryOutput(BaseModel):
+    """
+    Output for rag_query_tool.
+
+    Returns similar transactions with similarity scores.
+    """
+
+    success: bool = Field(..., description="True if search executed successfully")
+    data: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="List of similar transactions with similarity scores",
+    )
+    count: int = Field(..., description="Number of results returned")
+    query: str = Field(..., description="Original search query")
+    error: Optional[str] = Field(None, description="Error message if success=False")

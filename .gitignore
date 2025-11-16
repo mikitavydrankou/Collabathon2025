@@ -20,6 +20,7 @@ wheels/
 .installed.cfg
 *.egg
 .pytest_cache/
+chroma_store/
 .coverage
 htmlcov/
 .tox/
