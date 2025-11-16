@@ -10,7 +10,7 @@
 
 ## The Problem
 
-**1.3 billion people (16% of the world's population) live with significant disability**, many neurodevelopmental or cognitive in nature. This includes:
+**~1 billion people (16% of the world's population) live with significant disability**, many neurodevelopmental or cognitive in nature. This includes:
 
 - **10-15% of the population** has neurodivergent conditions (autism, ADHD, dyslexia, dyscalculia)
 - Difficulty with money concepts, arithmetic, and time management
