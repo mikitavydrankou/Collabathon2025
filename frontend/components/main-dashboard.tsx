@@ -24,7 +24,6 @@ import {
   ShoppingCart,
   BarChart3,
   MoreVertical,
-  HelpCircle,
   ArrowUpRight,
   ArrowDownLeft,
   Clock,
@@ -402,7 +401,12 @@ export default function MainDashboard({
             {/* Portfolio Pie Chart */}
             <Card className="border-0 shadow-sm">
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Your Portfolio</CardTitle>
+                <button
+                  onClick={() => setShowAIHelper(true)}
+                  className="text-left w-full hover:opacity-70 transition-opacity"
+                >
+                  <CardTitle className="text-lg">Your Portfolio</CardTitle>
+                </button>
               </CardHeader>
               <CardContent>
                 <div className="h-64 flex items-center justify-center">
@@ -748,13 +752,7 @@ export default function MainDashboard({
           }}
         />
       )}
-      <button
-        onClick={() => setShowAIHelper(true)}
-        className="fixed bottom-24 right-4 w-14 h-14 rounded-full bg-yellow-400 hover:bg-yellow-500 text-slate-900 flex items-center justify-center shadow-lg transition-all hover:scale-110 z-30"
-        title="Get help from AI"
-      >
-        <HelpCircle className="w-6 h-6" />
-      </button>
+
       {/* Connection Restored Popup */}
       {showConnectionRestored && (
         <>
