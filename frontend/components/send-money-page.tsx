@@ -42,6 +42,7 @@ export default function SendMoneyPage({
   const [currentFieldIndex, setCurrentFieldIndex] = useState(0);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showSimplePopup, setShowSimplePopup] = useState(false);
+  const [showFullSupportPopup, setShowFullSupportPopup] = useState(false);
 
   const [accountNumber, setAccountNumber] = useState("");
   const [recipientName, setRecipientName] = useState("");
@@ -83,6 +84,12 @@ export default function SendMoneyPage({
         if (draft.amount) setAmount(draft.amount);
         if (draft.title) setTitle(draft.title);
 
+        // Restore current step in full support mode
+        if (draft.currentStep !== undefined && supportLevel === "full") {
+          setCurrentFieldIndex(draft.currentStep);
+          console.log("📋 Restored to step:", draft.currentStep + 1);
+        }
+
         // Show notification that draft was restored
         setShowDraftRestored(true);
 
@@ -97,7 +104,7 @@ export default function SendMoneyPage({
         console.error("Failed to restore draft:", e);
       }
     }
-  }, []);
+  }, [supportLevel]);
 
   const fields = [
     {
@@ -525,9 +532,24 @@ export default function SendMoneyPage({
             <Card className="w-full max-w-md bg-white border-0 shadow-2xl relative z-20">
               <CardHeader className="pb-6 text-center">
                 <div className="text-4xl mb-3">📍</div>
-                <CardTitle className="text-2xl">{currentField.label}</CardTitle>
+                <button
+                  onClick={() => {
+                    // Add delay before showing popup (500ms)
+                    setTimeout(() => {
+                      setShowFullSupportPopup(true);
+                    }, 500);
+                  }}
+                  className="text-center w-full hover:opacity-80 transition-opacity cursor-pointer bg-transparent border-none p-0"
+                >
+                  <CardTitle className="text-2xl">
+                    {currentField.label}
+                  </CardTitle>
+                </button>
                 <p className="text-sm text-slate-500 mt-3">
                   {currentField.hint}
+                </p>
+                <p className="text-xs text-slate-400 mt-2">
+                  💡 Click title above to simulate connection loss
                 </p>
               </CardHeader>
 
@@ -1004,6 +1026,7 @@ export default function SendMoneyPage({
                         recipientName,
                         amount,
                         title,
+                        supportLevel: "none",
                         timestamp: Date.now(),
                       };
                       localStorage.setItem(
@@ -1032,6 +1055,134 @@ export default function SendMoneyPage({
                 </Button>
                 <Button
                   onClick={() => setShowSimplePopup(false)}
+                  variant="outline"
+                  className="w-full border-slate-300 text-slate-700 hover:bg-slate-50"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Full Support Offline Popup */}
+      {showFullSupportPopup && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/60 z-50"
+            onClick={() => setShowFullSupportPopup(false)}
+          />
+
+          {/* Popup Container */}
+          <div className="fixed inset-x-0 top-20 max-w-md mx-auto z-50 px-4">
+            <div className="bg-white rounded-2xl shadow-2xl p-6 animate-in fade-in slide-in-from-top-2">
+              <div className="flex flex-col items-center text-center mb-4">
+                <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                  <svg
+                    className="w-8 h-8 text-red-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414"
+                    />
+                  </svg>
+                </div>
+                <h3 className="font-semibold text-slate-900 text-xl mb-2">
+                  Connection Lost
+                </h3>
+                <p className="text-sm text-slate-500">
+                  Your internet connection was interrupted
+                </p>
+              </div>
+              <p className="text-sm text-slate-600 mb-6 text-center">
+                Don't worry! We've saved your progress. You can continue where
+                you left off when the connection is restored.
+              </p>
+              <div className="bg-yellow-50 rounded-lg p-4 mb-6 border-2 border-yellow-200">
+                <p className="text-xs font-semibold text-slate-700 mb-2">
+                  📝 Progress Saved
+                </p>
+                <div className="space-y-1 text-xs text-slate-600">
+                  {accountNumber && (
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                      Account: {accountNumber}
+                    </div>
+                  )}
+                  {recipientName && (
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                      Name: {recipientName}
+                    </div>
+                  )}
+                  {amount && (
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                      Amount: {amount} zł
+                    </div>
+                  )}
+                  {title && (
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                      Title: {title}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+                    Current step: {currentFieldIndex + 1} of {fields.length}
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3">
+                <Button
+                  onClick={() => {
+                    setIsSavingDraft(true);
+
+                    // Add 1 second delay before saving
+                    setTimeout(() => {
+                      // Save draft to localStorage with current step and support level
+                      const draft = {
+                        accountNumber: accountNumber.replace(/\s/g, ""),
+                        recipientName,
+                        amount,
+                        title,
+                        currentStep: currentFieldIndex,
+                        supportLevel: "full",
+                        timestamp: Date.now(),
+                      };
+                      localStorage.setItem(
+                        "transferDraft",
+                        JSON.stringify(draft),
+                      );
+                      // Set offline flag
+                      localStorage.setItem("offlineMode", "true");
+                      // Close popup and redirect
+                      setShowFullSupportPopup(false);
+                      setIsSavingDraft(false);
+                      onBack();
+                    }, 1000);
+                  }}
+                  disabled={isSavingDraft}
+                  className="w-full bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isSavingDraft ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-slate-900 border-t-transparent rounded-full animate-spin" />
+                      Saving Draft...
+                    </>
+                  ) : (
+                    "Save Draft & Continue"
+                  )}
+                </Button>
+                <Button
+                  onClick={() => setShowFullSupportPopup(false)}
                   variant="outline"
                   className="w-full border-slate-300 text-slate-700 hover:bg-slate-50"
                 >

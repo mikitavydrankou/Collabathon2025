@@ -220,7 +220,24 @@ export default function MainDashboard({
   const handleReturnToDraft = () => {
     console.log("📄 Continuing with draft");
     setShowConnectionRestored(false);
-    setSupportLevel("none");
+
+    // Read draft to get support level
+    const draftStr = localStorage.getItem("transferDraft");
+    if (draftStr) {
+      try {
+        const draft = JSON.parse(draftStr);
+        // Set support level from draft (default to "none" if not specified)
+        const savedSupportLevel = draft.supportLevel || "none";
+        console.log("📋 Restoring support level:", savedSupportLevel);
+        setSupportLevel(savedSupportLevel);
+      } catch (e) {
+        console.error("Failed to parse draft:", e);
+        setSupportLevel("none");
+      }
+    } else {
+      setSupportLevel("none");
+    }
+
     setCurrentPage("send-money");
   };
 
@@ -380,63 +397,50 @@ export default function MainDashboard({
             </TabsTrigger>
           </TabsList>
 
-					{/* Overview Tab */}
-					<TabsContent value='overview' className='space-y-6'>
-						{/* Portfolio Pie Chart */}
-						<Card className='border-0 shadow-sm'>
-							<CardHeader className='pb-2'>
-								<CardTitle className='text-lg'>
-									Your Portfolio
-								</CardTitle>
-							</CardHeader>
-							<CardContent>
-								<div className='h-64 flex items-center justify-center'>
-									<ResponsiveContainer
-										width='100%'
-										height='100%'
-									>
-										<PieChart>
-											<Pie
-												data={portfolioData}
-												cx='50%'
-												cy='50%'
-												innerRadius={60}
-												outerRadius={90}
-												paddingAngle={2}
-												dataKey='value'
-											>
-												{portfolioData.map(
-													(entry, index) => (
-														<Cell
-															key={`cell-${index}`}
-															fill={entry.color}
-														/>
-													)
-												)}
-											</Pie>
-										</PieChart>
-									</ResponsiveContainer>
-								</div>
-								<div className='grid grid-cols-2 gap-3 mt-4'>
-									{portfolioData.map((item, idx) => (
-										<div
-											key={idx}
-											className='flex items-center gap-2'
-										>
-											<div
-												className='w-3 h-3 rounded-full'
-												style={{
-													backgroundColor: item.color,
-												}}
-											/>
-											<span className='text-xs text-slate-600'>
-												{item.name}
-											</span>
-										</div>
-									))}
-								</div>
-							</CardContent>
-						</Card>
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
+            {/* Portfolio Pie Chart */}
+            <Card className="border-0 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">Your Portfolio</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64 flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={portfolioData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={90}
+                        paddingAngle={2}
+                        dataKey="value"
+                      >
+                        {portfolioData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="grid grid-cols-2 gap-3 mt-4">
+                  {portfolioData.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{
+                          backgroundColor: item.color,
+                        }}
+                      />
+                      <span className="text-xs text-slate-600">
+                        {item.name}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Recent Transactions */}
             <Card className="border-0 shadow-sm">
@@ -744,13 +748,13 @@ export default function MainDashboard({
           }}
         />
       )}
-			<button
-				onClick={() => setShowAIHelper(true)}
-				className='fixed bottom-24 right-4 w-14 h-14 rounded-full bg-yellow-400 hover:bg-yellow-500 text-slate-900 flex items-center justify-center shadow-lg transition-all hover:scale-110 z-30'
-				title='Get help from AI'
-			>
-				<HelpCircle className='w-6 h-6' />
-			</button>
+      <button
+        onClick={() => setShowAIHelper(true)}
+        className="fixed bottom-24 right-4 w-14 h-14 rounded-full bg-yellow-400 hover:bg-yellow-500 text-slate-900 flex items-center justify-center shadow-lg transition-all hover:scale-110 z-30"
+        title="Get help from AI"
+      >
+        <HelpCircle className="w-6 h-6" />
+      </button>
       {/* Connection Restored Popup */}
       {showConnectionRestored && (
         <>
