@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ArrowLeft, CheckCircle2, Loader2, AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import FaceIdButton from "@/components/face-id-button";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -29,6 +30,7 @@ export default function TransactionConfirmation({
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showBiometricModal, setShowBiometricModal] = useState(false);
 
   const formatAmount = (value: string) => {
     const num = parseFloat(value);
@@ -44,7 +46,15 @@ export default function TransactionConfirmation({
     onBack();
   };
 
-  const handleConfirm = async () => {
+  const handleConfirm = () => {
+    console.log("🔐 handleConfirm clicked, opening biometric modal");
+    setShowBiometricModal(true);
+    console.log("showBiometricModal set to:", true);
+  };
+
+  const handleBiometricSuccess = async () => {
+    console.log("✅ Face ID authentication successful");
+    setShowBiometricModal(false);
     setIsProcessing(true);
     setError(null);
 
@@ -131,6 +141,7 @@ export default function TransactionConfirmation({
           : "Transaction failed. Please try again.",
       );
       setIsProcessing(false);
+      setShowBiometricModal(false);
     }
   };
 
@@ -297,7 +308,12 @@ export default function TransactionConfirmation({
       <div className="sticky bottom-0 bg-white border-t border-slate-200 p-4">
         <div className="max-w-md mx-auto space-y-3">
           <Button
-            onClick={handleConfirm}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleConfirm();
+            }}
             disabled={isProcessing}
             className="w-full bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-semibold py-6 text-base disabled:opacity-50"
           >
@@ -329,6 +345,39 @@ export default function TransactionConfirmation({
           </p>
         </div>
       </div>
+
+      {/* Biometric Modal Overlay */}
+      {showBiometricModal && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 animate-in fade-in duration-300">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-md"
+            onClick={() => setShowBiometricModal(false)}
+          />
+          <div className="relative bg-slate-800 rounded-3xl p-8 mx-4 shadow-2xl animate-in slide-in-from-top duration-500 max-w-sm w-full">
+            <div className="text-center mb-6">
+              <h3 className="text-white text-xl font-semibold mb-2">
+                Confirm with Face ID
+              </h3>
+              <p className="text-slate-300 text-sm">
+                Authenticate to send {formatAmount(amount)}
+              </p>
+              <p className="text-slate-400 text-xs mt-1">to {recipientName}</p>
+            </div>
+            <div className="flex justify-center">
+              <FaceIdButton
+                onAuthSuccess={handleBiometricSuccess}
+                autoStart={true}
+              />
+            </div>
+            <button
+              onClick={() => setShowBiometricModal(false)}
+              className="mt-6 text-slate-400 hover:text-white text-sm transition-colors w-full"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         @keyframes scale-in {
