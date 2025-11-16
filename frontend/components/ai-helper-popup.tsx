@@ -153,7 +153,6 @@ export default function AIHelperPopup({
 					</div>
 				)}
 
-<<<<<<< Updated upstream
 				{step === 'options' && (
 					<div className='mx-4 bg-white rounded-2xl shadow-2xl p-6 animate-in fade-in slide-in-from-top-2'>
 						<div className='mb-4'>
@@ -166,31 +165,11 @@ export default function AIHelperPopup({
 						</div>
 						<div className='space-y-2'>
 							{[
-								{
-									label: 'Payment Assistant',
-									action: 'chatbot',
-									icon: MessageSquare,
-									desc: 'AI guides you step-by-step',
-								},
-								{
-									label: 'Full Support',
-									action: 'full_support',
-									icon: HelpCircle,
-									desc: 'Complete step-by-step guide',
-								},
-								{
-									label: 'Partial Support',
-									action: 'partial_support',
-									icon: HelpCircle,
-									desc: 'Light hints and tips',
-								},
-								{
-									label: 'No Support',
-									action: 'no_support',
-									icon: ZapOff,
-									desc: 'Direct transfer form',
-								},
-							].map(option => {
+                { label: 'Payment assistant chat', action: 'chatbot', icon: MessageSquare, desc: 'Chat with AI' },
+                { label: 'Step-by-step explanations', action: 'full_support', icon: HelpCircle, desc: 'Work through the process with explanations' },
+                { label: 'Quality checks only', action: 'partial_support', icon: HelpCircle, desc: 'Light hints' },
+                { label: 'Basic payment form', action: 'no_support', icon: ZapOff, desc: 'Just send money' },
+              ].map(option => {
 								const Icon = option.icon
 								return (
 									<button
@@ -225,47 +204,4 @@ export default function AIHelperPopup({
 			</div>
 		</>
 	)
-=======
-        {step === 'options' && (
-          <div className="mx-4 bg-white rounded-2xl shadow-2xl p-6 animate-in fade-in slide-in-from-top-2">
-            <div className="mb-4">
-              <h3 className="font-semibold text-slate-900 mb-2">How can I help?</h3>
-              <p className="text-sm text-slate-600">Choose your preferred support level:</p>
-            </div>
-            <div className="space-y-2">
-              {[
-                { label: 'Chatbot', action: 'chatbot', icon: MessageSquare, desc: 'Chat with AI' },
-                { label: 'Step by step explanations', action: 'full_support', icon: HelpCircle, desc: 'Step-by-step guide' },
-                { label: 'Quality checks only', action: 'partial_support', icon: HelpCircle, desc: 'Light hints' },
-                { label: 'Basic payment form', action: 'no_support', icon: ZapOff, desc: 'Just send money' },
-              ].map((option) => {
-                const Icon = option.icon
-                return (
-                  <button
-                    key={option.action}
-                    onClick={() => handleOptionSelect(option.action)}
-                    className="w-full p-3 text-left bg-slate-50 hover:bg-yellow-50 rounded-lg transition-colors border border-slate-200 hover:border-yellow-400 flex items-center gap-3"
-                  >
-                    <Icon className="w-5 h-5 text-yellow-400 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm font-medium text-slate-900">{option.label}</p>
-                      <p className="text-xs text-slate-500">{option.desc}</p>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-            <Button
-              onClick={onClose}
-              variant="outline"
-              className="w-full mt-4 border-slate-300 text-slate-700"
-            >
-              Close
-            </Button>
-          </div>
-        )}
-      </div>
-    </>
-  )
->>>>>>> Stashed changes
 }
