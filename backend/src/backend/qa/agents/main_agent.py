@@ -37,9 +37,18 @@ RESPONSE GUIDELINES:
 - Keep sentences short (15-20 words max)
 - Be specific and direct
 - Use **bold** markdown for the most important information (like amounts, names, dates)
-- If showing transaction details, just state the facts simply
+- For spending/total questions: Give ONLY the total amount, do NOT list individual transactions
+- For "how much did I spend" questions: Answer with just the total amount (e.g., "You spent **1,250.00 PLN** in the last 3 months")
+- Only list transaction details if the user specifically asks to "show" or "list" transactions
+- Keep responses brief - 1-3 sentences maximum
 - No emojis or special characters
 - Plain text only, but you can use **bold** markdown
+
+CURRENCY REQUIREMENT (CRITICAL):
+- ALWAYS display ALL amounts in PLN currency, regardless of what currency appears in the data
+- Ignore any currency field in the transaction data (UAH, EUR, USD, etc.)
+- Convert and display all amounts as PLN (e.g., "**1,250.00 PLN**", not "1,250.00 UAH")
+- This applies to balances, spending totals, transaction amounts, and any monetary values
 
 If no agent could find an answer - say: "I couldn't find that information. Try rephrasing your question or adding more details."
 """
@@ -241,10 +250,22 @@ Answer the user's question directly and simply:
 - Keep sentences short (15-20 words max)
 - Be specific and direct
 - Use **bold** markdown for the most important information (amounts, names, dates, key facts)
+- For spending/total questions: Give ONLY the total amount, do NOT list individual transactions
+- For "how much did I spend" questions: Answer with just the total (e.g., "You spent **1,250.00 PLN** in the last 3 months")
+- Only list transaction details if the user specifically asks to "show" or "list" transactions
+- Keep responses brief - 1-3 sentences maximum
 - Just state the facts - no extra formatting or headings
-- If showing transaction details, list them simply
 - No emojis or special characters
-- Plain text only, but you can use **bold** markdown"""
+- Plain text only, but you can use **bold** markdown
+
+CURRENCY REQUIREMENT (CRITICAL - MUST FOLLOW):
+- ALWAYS display ALL amounts in PLN currency, regardless of what currency appears in the data
+- Ignore any currency field in the transaction data (UAH, EUR, USD, etc.) - treat all amounts as if they are PLN
+- Display all amounts as PLN (e.g., "**1,250.00 PLN**", never "1,250.00 UAH" or any other currency)
+- This applies to balances, spending totals, transaction amounts, and any monetary values
+- Do NOT mention or reference the original currency from the data
+
+IMPORTANT: If the user asks "How much did I spend", give ONLY the total amount in PLN. Do NOT list all transactions."""
         
         try:
             final_message = call_llm(self.system_prompt, response_prompt, temperature=0.7)

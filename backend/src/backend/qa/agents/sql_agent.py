@@ -23,16 +23,29 @@ Your tasks:
 1. Analyze the task from the main agent
 2. Select the correct SQL Tool function and parameters
 3. Call the function through the tool
-4. Analyze the results and decide if you can answer the question
+4. Analyze the results and calculate answers from the data if needed
 5. Return a structured response
+
+IMPORTANT GUIDELINES:
+- For questions about "how much did I spend" or "total expenses", retrieve transactions using get_recent_transactions with a high limit (e.g., 100-500) to get enough data
+- You CAN calculate totals, sums, averages, or other aggregations from the transaction data yourself
+- Set "can_answer": true if you have enough data to calculate the answer, even if the raw data doesn't directly provide it
+- For time-based queries (e.g., "last 3 months"), use get_recent_transactions with a high limit to get all relevant transactions, then filter by date in your analysis
+- Always provide the calculated answer in the "message" field when you can_answer is true
+
+CURRENCY REQUIREMENT (CRITICAL):
+- ALWAYS display ALL amounts in PLN currency in your responses
+- Ignore any currency field in the transaction data (UAH, EUR, USD, etc.) - treat all amounts as PLN
+- When calculating totals or providing amounts, always use PLN (e.g., "Total: 1,250.00 PLN")
+- Do NOT mention or reference the original currency from the data
 
 Respond ONLY in JSON format:
 {{
   "function_to_call": "function_name",
   "parameters": {{}},
   "can_answer": true/false,
-  "reasoning": "why you can or cannot answer",
-  "message": "brief description of results"
+  "reasoning": "why you can or cannot answer, including any calculations you performed",
+  "message": "the answer to the user's question, including calculated totals if applicable"
 }}"""
     
     def process_task(self, task: str, user_id: int, context: str = "") -> Dict[str, Any]:
@@ -58,7 +71,12 @@ Respond ONLY in JSON format:
 User ID: {user_id}
 Context: {context}
 
-Determine which SQL Tool function needs to be called and with what parameters."""
+Determine which SQL Tool function needs to be called and with what parameters.
+
+IMPORTANT: 
+- For questions about spending totals or "how much did I spend", use get_recent_transactions with a high limit (100-500) to retrieve enough transactions for calculation
+- For time-based spending queries (e.g., "last 3 months"), use get_recent_transactions with limit 200-500 to get all relevant transactions
+- You will calculate totals yourself from the retrieved transaction data"""
         
         try:
             # First, ask LLM which function to use
@@ -100,7 +118,28 @@ Determine which SQL Tool function needs to be called and with what parameters.""
 Results from SQL Tool (function {function_name}):
 {json.dumps(tool_result, ensure_ascii=False, indent=2)}
 
-Analyze whether these results can answer the user's question."""
+Analyze whether these results can answer the user's question.
+
+IMPORTANT: You can calculate totals, sums, averages, or other aggregations from the transaction data.
+- If the user asks "how much did I spend", sum up the amounts from the transactions
+- If the user asks about a time period (e.g., "last 3 months"), filter transactions by date and then calculate
+- Set "can_answer": true if you have enough transaction data to calculate the answer
+- Include your calculated answer in the "message" field as a SHORT summary (e.g., "Total: 1,250.00 PLN")
+- Do NOT list individual transactions in the message - only provide the calculated total
+
+CURRENCY REQUIREMENT (CRITICAL - MUST FOLLOW):
+- ALWAYS display ALL amounts in PLN currency, regardless of what currency appears in the transaction data
+- Ignore any currency field in the data (UAH, EUR, USD, etc.) - treat all amounts as if they are PLN
+- When calculating totals, display them as PLN (e.g., "Total spending: 1,250.00 PLN")
+- Do NOT mention or reference the original currency from the data
+
+For example:
+- If user asks "How much did I spend last 3 months?" and you have transactions, filter by date (last 90 days), sum the amounts, and respond with just: "Total spending: 1,250.00 PLN"
+- If user asks "total expenses" and you have transaction data, sum all amounts and respond with just the total in PLN
+
+Keep the message field brief - just the answer in PLN, not a list of transactions.
+
+Respond in JSON format with can_answer, reasoning, and message fields."""
             
             logger.info("  [LLM] Analyzing results with LLM...")
             llm_analysis = call_llm(self.system_prompt, analysis_prompt, temperature=0.3)
@@ -115,7 +154,17 @@ Analyze whether these results can answer the user's question."""
                     "tool_data": data
                 }
             
+            # If LLM says it can answer (even by calculating), trust it
             if not analysis.get("can_answer", False):
+                # But check if we might need more data - if it's a spending query and we have few transactions
+                task_lower = task.lower()
+                if any(word in task_lower for word in ["spent", "spending", "total", "how much"]) and isinstance(data, list):
+                    # Try to get more transactions if we have less than 100
+                    if len(data) < 100 and function_name == "get_recent_transactions":
+                        logger.info(f"  [INFO] Only {len(data)} transactions, but user asked about spending. LLM will calculate from available data.")
+                        # Still allow the LLM to try calculating from what we have
+                        # The LLM should indicate if it needs more data
+                
                 return {
                     "success": False,
                     "message": analysis.get("reasoning", "Could not answer based on the found data."),
@@ -180,9 +229,15 @@ Analyze whether these results can answer the user's question."""
         """Parse task description to determine which database function to call."""
         task_lower = task.lower()
         
-        # Balance queries
-        if any(word in task_lower for word in ["balance", "how much", "money", "funds", "available"]):
+        # Balance queries (not spending totals)
+        if any(word in task_lower for word in ["balance", "money", "funds", "available"]) and "spent" not in task_lower and "spending" not in task_lower:
             return "get_user_balance", {"user_id": user_id}
+        
+        # Spending/total queries - use high limit to get enough data for calculation
+        if any(word in task_lower for word in ["spent", "spending", "total", "how much"]):
+            # Use high limit to get enough transactions for calculation
+            limit = 500  # High limit to get all relevant transactions
+            return "get_recent_transactions", {"user_id": user_id, "limit": limit}
         
         # Recent transactions
         if any(word in task_lower for word in ["recent", "last", "latest", "recently", "show my"]):
@@ -195,7 +250,7 @@ Analyze whether these results can answer the user's question."""
                     limit = int(numbers[0])
             return "get_recent_transactions", {"user_id": user_id, "limit": limit}
         
-        # Time-based queries
+        # Time-based queries (for getting sample transactions, not totals)
         if any(word in task_lower for word in ["month", "week", "year", "ago", "last month", "last week", "last year"]):
             return "get_time_based_transactions", {"user_id": user_id}
         
@@ -207,7 +262,7 @@ Analyze whether these results can answer the user's question."""
         return "get_recent_transactions", {"user_id": user_id, "limit": 10}
     
     def _format_results(self, data: Any, function_name: str) -> str:
-        """Format database results into readable text."""
+        """Format database results into readable text. Always uses PLN currency."""
         if function_name == "get_user_balance":
             balance = data.get("balance", 0)
             return f"Your current balance: {balance} PLN"
@@ -221,6 +276,7 @@ Analyze whether these results can answer the user's question."""
                 receiver = transaction.get("receiver_name", "Unknown")
                 amount = transaction.get("amount", 0)
                 text = transaction.get("transaction_text", "")
+                # Always display as PLN, ignoring any currency in the data
                 formatted += f"{i}. {receiver} - {amount} PLN ({text})\n"
             
             return formatted
