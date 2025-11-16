@@ -300,7 +300,7 @@ export default function ChatbotScreen({
             <ArrowLeft size={24} />
           </button>
           <div>
-            <h1 className="text-xl font-bold">Payment Assistant</h1>
+            <h1 className="text-xl font-bold">Payment assistant chat</h1>
             <p className="text-sm text-slate-300">Here to help you</p>
           </div>
         </div>
