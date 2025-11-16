@@ -31,6 +31,7 @@ import {
   Clock,
 } from "lucide-react";
 import AIHelperPopup from "@/components/ai-helper-popup";
+import PaymentSuggestionPopup from "@/components/payment-suggestion-popup";
 import SendMoneyPage from "@/components/send-money-page";
 import ChatbotScreen from "@/components/chatbot-screen";
 import QAChatbotScreen from "@/components/qa-chatbot-screen";
@@ -81,6 +82,8 @@ export default function MainDashboard({
   const [showBalance, setShowBalance] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [showAIHelper, setShowAIHelper] = useState(false);
+  const [showPaymentSuggestion, setShowPaymentSuggestion] = useState(false);
+  const [aiHelperInitialStep, setAiHelperInitialStep] = useState<'popup' | 'input' | 'options'>('popup');
   const [currentPage, setCurrentPage] = useState<
     | "dashboard"
     | "send-money"
@@ -382,9 +385,12 @@ export default function MainDashboard({
                 )}
               </button>
             </div>
-            <p className="text-xs text-green-600 font-medium">
+            <button
+              onClick={() => setShowPaymentSuggestion(true)}
+              className="text-xs text-green-600 font-medium hover:text-green-700 hover:underline transition-colors cursor-pointer"
+            >
               +5,345.25 zł since last login
-            </p>
+            </button>
           </CardContent>
         </Card>
 
@@ -986,15 +992,33 @@ export default function MainDashboard({
         </>
       )}
 
+      {/* Payment Suggestion Popup */}
+      {showPaymentSuggestion && (
+        <PaymentSuggestionPopup
+          onClose={() => setShowPaymentSuggestion(false)}
+          onShowMe={() => {
+            setShowPaymentSuggestion(false);
+            setAiHelperInitialStep('options');
+            setShowAIHelper(true);
+          }}
+          recipientName="Mike Wilson"
+          amount="1,500.00 zł"
+        />
+      )}
+
       {/* AI Helper Popup */}
       {showAIHelper && (
         <AIHelperPopup
-          onClose={() => setShowAIHelper(false)}
+          onClose={() => {
+            setShowAIHelper(false);
+            setAiHelperInitialStep('popup');
+          }}
           onSelectOption={handleAIOption}
           onSendToQA={(message) => {
             setQaInitialMessage(message);
             setCurrentPage("qa-chatbot");
           }}
+          initialStep={aiHelperInitialStep}
         />
       )}
 

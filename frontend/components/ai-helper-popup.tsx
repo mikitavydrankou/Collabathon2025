@@ -15,14 +15,16 @@ interface AIHelperPopupProps {
 	onClose: () => void
 	onSelectOption?: (option: string) => void
 	onSendToQA?: (message: string) => void
+	initialStep?: 'popup' | 'input' | 'options'
 }
 
 export default function AIHelperPopup({
 	onClose,
 	onSelectOption,
 	onSendToQA,
+	initialStep = 'popup',
 }: AIHelperPopupProps) {
-	const [step, setStep] = useState<'popup' | 'input' | 'options'>('popup')
+	const [step, setStep] = useState<'popup' | 'input' | 'options'>(initialStep)
 	const [message, setMessage] = useState('')
 
 	const handleAccept = () => {
