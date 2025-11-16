@@ -167,12 +167,6 @@ export default function TransactionConfirmation({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex flex-col">
-      {/* Fingerprint Logo (centered, decorative) */}
-      <div className="px-4 pt-6 pb-6 bg-white shadow-md">
-        <div className="flex justify-center mb-2 mt-2">
-          <Fingerprint size={64} strokeWidth={2.5} className="text-yellow-400 drop-shadow-lg" />
-        </div>
-      </div>
       {/* Header */}
       <div className="sticky top-0 bg-white border-b border-slate-200 px-4 py-4 z-10">
         <div className="flex items-center gap-3 max-w-md mx-auto">

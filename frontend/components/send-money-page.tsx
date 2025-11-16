@@ -7,6 +7,13 @@ import {
   ChevronRight,
   ArrowRight,
   AlertCircle,
+  CreditCard,
+  User,
+  DollarSign,
+  FileText,
+  Target,
+  Lightbulb,
+  Save,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -180,6 +187,24 @@ export default function SendMoneyPage({
 
   const currentField = fields[currentFieldIndex];
   const isComplete = accountNumber && recipientName && amount && title;
+
+  // Get icon for each step
+  const getStepIcon = (stepIndex: number) => {
+    switch (stepIndex) {
+      case 0: // Account Number
+        return CreditCard;
+      case 1: // Recipient Name
+        return User;
+      case 2: // Amount
+        return DollarSign;
+      case 3: // Transfer Title
+        return FileText;
+      default:
+        return CreditCard;
+    }
+  };
+
+  const StepIcon = getStepIcon(currentFieldIndex);
 
   useEffect(() => {
     if (supportLevel === "full") {
@@ -522,10 +547,19 @@ export default function SendMoneyPage({
           <div className="flex-1">
             <h1 className="text-lg font-semibold text-slate-900">Send Money</h1>
             {supportLevel !== "none" && (
-              <p className="text-xs text-yellow-600">
-                {supportLevel === "full" &&
-                  "🎯 Full Support Mode - Expert Guidance"}
-                {supportLevel === "partial" && "💡 Partial Support Mode"}
+              <p className="text-xs text-yellow-600 flex items-center gap-1">
+                {supportLevel === "full" && (
+                  <>
+                    <Target className="w-3 h-3" />
+                    Full Support Mode - Expert Guidance
+                  </>
+                )}
+                {supportLevel === "partial" && (
+                  <>
+                    <Lightbulb className="w-3 h-3" />
+                    Partial Support Mode
+                  </>
+                )}
               </p>
             )}
           </div>
@@ -571,7 +605,11 @@ export default function SendMoneyPage({
           <div className="flex flex-col items-center justify-center min-h-96">
             <Card className="w-full max-w-md bg-white border-0 shadow-2xl relative z-20">
               <CardHeader className="pb-6 text-center">
-                <div className="text-4xl mb-3">📍</div>
+                <div className="flex justify-center mb-3">
+                  <div className="w-16 h-16 rounded-full bg-yellow-100 flex items-center justify-center">
+                    <StepIcon className="w-8 h-8 text-yellow-600" />
+                  </div>
+                </div>
                 <button
                   onClick={() => {
                     // Add delay before showing popup (500ms)
@@ -588,8 +626,9 @@ export default function SendMoneyPage({
                 <p className="text-sm text-slate-500 mt-3">
                   {currentField.hint}
                 </p>
-                <p className="text-xs text-slate-400 mt-2">
-                  💡 Click title above to simulate connection loss
+                <p className="text-xs text-slate-400 mt-2 flex items-center justify-center gap-1">
+                  <Lightbulb className="w-3 h-3" />
+                  Click title above to simulate connection loss
                 </p>
               </CardHeader>
 
@@ -1419,8 +1458,9 @@ export default function SendMoneyPage({
                 you left off when the connection is restored.
               </p>
               <div className="bg-yellow-50 rounded-lg p-4 mb-6 border-2 border-yellow-200">
-                <p className="text-xs font-semibold text-slate-700 mb-2">
-                  📝 Progress Saved
+                <p className="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1">
+                  <Save className="w-3 h-3" />
+                  Progress Saved
                 </p>
                 <div className="space-y-1 text-xs text-slate-600">
                   {accountNumber && (
