@@ -55,6 +55,22 @@ export default function SendMoneyPage({
   const [hasSeenError, setHasSeenError] = useState(false);
   const [suggestedReceiverName, setSuggestedReceiverName] =
     useState<string>("");
+
+  // Validation states for partial support mode
+  const [accountNumberError, setAccountNumberError] =
+    useState<ValidationError | null>(null);
+  const [recipientNameError, setRecipientNameError] =
+    useState<ValidationError | null>(null);
+  const [amountError, setAmountError] = useState<ValidationError | null>(null);
+  const [isValidatingPartial, setIsValidatingPartial] = useState<{
+    accountNumber: boolean;
+    recipientName: boolean;
+    amount: boolean;
+  }>({
+    accountNumber: false,
+    recipientName: false,
+    amount: false,
+  });
   const [showDraftRestored, setShowDraftRestored] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
 
@@ -154,6 +170,13 @@ export default function SendMoneyPage({
   useEffect(() => {
     setTimeout(() => inputRef.current?.focus(), 0);
   }, [currentFieldIndex]);
+
+  // Auto-fill recipient name in partial support when suggestion is available
+  useEffect(() => {
+    if (supportLevel === "partial" && suggestedReceiverName && !recipientName) {
+      setRecipientName(suggestedReceiverName);
+    }
+  }, [suggestedReceiverName, supportLevel]);
 
   const validateBankNumber = async (
     bankNumber: string,
@@ -804,58 +827,315 @@ export default function SendMoneyPage({
             </CardHeader>
 
             <CardContent className="space-y-6">
-              {fields.map((field) => (
-                <div key={field.name}>
-                  <label className="block text-sm font-semibold text-slate-700 mb-3">
-                    {field.label}
-                  </label>
+              {fields.map((field) => {
+                const fieldError =
+                  field.name === "accountNumber"
+                    ? accountNumberError
+                    : field.name === "name"
+                      ? recipientNameError
+                      : field.name === "amount"
+                        ? amountError
+                        : null;
+                const isValidatingField =
+                  field.name === "accountNumber"
+                    ? isValidatingPartial.accountNumber
+                    : field.name === "name"
+                      ? isValidatingPartial.recipientName
+                      : field.name === "amount"
+                        ? isValidatingPartial.amount
+                        : false;
 
-                  <div className="relative flex items-center">
-                    <input
-                      type={field.type || "text"}
-                      value={field.value}
-                      onChange={(e) => {
-                        // Apply IBAN formatting for account number field
-                        if (field.name === "accountNumber") {
-                          const formatted = formatIBAN(e.target.value);
-                          field.setValue(formatted);
-                        } else {
-                          field.setValue(e.target.value);
-                        }
-                      }}
-                      placeholder={field.placeholder}
-                      className={`w-full px-4 py-3 border-2 rounded-lg text-base transition-all focus:outline-none bg-white ${
-                        field.name === "accountNumber"
-                          ? "font-mono tracking-wider"
-                          : ""
-                      } ${
-                        showDraftRestored && field.value
-                          ? "border-green-500 focus:border-green-600 animate-pulse"
-                          : "border-slate-200 focus:border-yellow-400 hover:border-slate-300"
-                      }`}
-                    />
-                    {showDraftRestored && field.value && (
-                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                        <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
-                          <svg
-                            className="w-4 h-4 text-white"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
+                return (
+                  <div key={field.name}>
+                    <label className="block text-sm font-semibold text-slate-700 mb-3">
+                      {field.label}
+                    </label>
+
+                    <div className="relative flex items-center">
+                      <input
+                        type={field.type || "text"}
+                        value={field.value}
+                        onChange={(e) => {
+                          // Apply IBAN formatting for account number field
+                          if (field.name === "accountNumber") {
+                            const formatted = formatIBAN(e.target.value);
+                            field.setValue(formatted);
+                            setAccountNumberError(null);
+                          } else {
+                            field.setValue(e.target.value);
+                            if (field.name === "name") {
+                              setRecipientNameError(null);
+                            } else if (field.name === "amount") {
+                              setAmountError(null);
+                            }
+                          }
+                        }}
+                        onBlur={async () => {
+                          // Validate on blur for partial support mode
+                          if (supportLevel === "partial" && field.value) {
+                            if (field.name === "accountNumber") {
+                              setIsValidatingPartial((prev) => ({
+                                ...prev,
+                                accountNumber: true,
+                              }));
+                              const result = await validateBankNumber(
+                                field.value,
+                              );
+                              setIsValidatingPartial((prev) => ({
+                                ...prev,
+                                accountNumber: false,
+                              }));
+
+                              if (!result.valid) {
+                                const receiverName = (result as any)
+                                  .receiver_name;
+                                let errorPos = (result as any).error_position;
+
+                                if (
+                                  errorPos === undefined ||
+                                  errorPos === null
+                                ) {
+                                  const suggestion = result.suggestion;
+                                  if (suggestion && field.value) {
+                                    for (
+                                      let i = 0;
+                                      i <
+                                      Math.min(
+                                        field.value.length,
+                                        suggestion.length,
+                                      );
+                                      i++
+                                    ) {
+                                      if (field.value[i] !== suggestion[i]) {
+                                        errorPos = i;
+                                        break;
+                                      }
+                                    }
+                                  }
+                                }
+
+                                setAccountNumberError({
+                                  field: "accountNumber",
+                                  message: receiverName
+                                    ? `This account number looks similar to ${receiverName}'s account. Did you mean to send to them?`
+                                    : result.suggestion
+                                      ? `This account number looks similar to: ${result.suggestion}. Did you mean this one?`
+                                      : "This account number appears to be invalid.",
+                                  suggestion: result.suggestion,
+                                  receiverName: receiverName,
+                                  userInput: field.value,
+                                  errorPosition: errorPos,
+                                });
+
+                                if (receiverName) {
+                                  setSuggestedReceiverName(receiverName);
+                                }
+                              }
+                            } else if (field.name === "name") {
+                              if (accountNumber) {
+                                setIsValidatingPartial((prev) => ({
+                                  ...prev,
+                                  recipientName: true,
+                                }));
+                                const result = await validateFullname(
+                                  accountNumber,
+                                  field.value,
+                                );
+                                setIsValidatingPartial((prev) => ({
+                                  ...prev,
+                                  recipientName: false,
+                                }));
+
+                                if (!result.valid) {
+                                  setRecipientNameError({
+                                    field: "recipientName",
+                                    message: result.suggestion
+                                      ? `The name doesn't match our records. Did you mean: ${result.suggestion}?`
+                                      : "The recipient name doesn't match previous transactions.",
+                                    suggestion: result.suggestion,
+                                  });
+                                }
+                              }
+                            } else if (field.name === "amount") {
+                              const amountValue = parseFloat(field.value);
+                              if (!isNaN(amountValue)) {
+                                setIsValidatingPartial((prev) => ({
+                                  ...prev,
+                                  amount: true,
+                                }));
+                                const result =
+                                  await validateAmount(amountValue);
+                                setIsValidatingPartial((prev) => ({
+                                  ...prev,
+                                  amount: false,
+                                }));
+
+                                if (!result.valid) {
+                                  setAmountError({
+                                    field: "amount",
+                                    message:
+                                      "This amount is unusual compared to your typical transactions. Please verify.",
+                                  });
+                                }
+                              }
+                            }
+                          }
+                        }}
+                        placeholder={field.placeholder}
+                        disabled={isValidatingField}
+                        className={`w-full px-4 py-3 border-2 rounded-lg text-base transition-all focus:outline-none bg-white ${
+                          field.name === "accountNumber"
+                            ? "font-mono tracking-wider"
+                            : ""
+                        } ${
+                          fieldError
+                            ? "border-yellow-500 focus:border-yellow-600"
+                            : showDraftRestored && field.value
+                              ? "border-green-500 focus:border-green-600 animate-pulse"
+                              : "border-slate-200 focus:border-yellow-400 hover:border-slate-300"
+                        }`}
+                      />
+                      {isValidatingField && (
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                          <div className="w-5 h-5 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      )}
+                      {showDraftRestored &&
+                        field.value &&
+                        !isValidatingField && (
+                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                            <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+                              <svg
+                                className="w-4 h-4 text-white"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M5 13l4 4L19 7"
+                                />
+                              </svg>
+                            </div>
+                          </div>
+                        )}
+                    </div>
+
+                    {fieldError && (
+                      <div className="mt-3 p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg">
+                        <div className="flex gap-3">
+                          <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-yellow-900 mb-2">
+                              Please Review
+                            </p>
+                            {fieldError.receiverName ? (
+                              <div className="space-y-2">
+                                <p className="text-xs text-yellow-800">
+                                  Similar to{" "}
+                                  <span className="font-bold">
+                                    {fieldError.receiverName}
+                                  </span>
+                                  . Did you mean them?
+                                </p>
+                                {fieldError.userInput &&
+                                  fieldError.suggestion && (
+                                    <div className="bg-white rounded-md p-2 border border-yellow-200 space-y-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs text-yellow-700 font-medium w-12 shrink-0">
+                                          You:
+                                        </span>
+                                        <div className="font-mono text-xs leading-relaxed">
+                                          {fieldError.userInput
+                                            .split("")
+                                            .map((char, idx) => (
+                                              <span
+                                                key={idx}
+                                                className={
+                                                  fieldError.errorPosition !==
+                                                    undefined &&
+                                                  idx >=
+                                                    fieldError.errorPosition
+                                                    ? "text-red-700 font-extrabold bg-red-100 border-b-[3px] border-red-600 px-px rounded-sm"
+                                                    : "text-slate-700"
+                                                }
+                                              >
+                                                {char}
+                                              </span>
+                                            ))}
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs text-green-700 font-medium w-12 shrink-0">
+                                          Them:
+                                        </span>
+                                        <div className="font-mono text-xs leading-relaxed">
+                                          {fieldError.suggestion
+                                            .split("")
+                                            .map((char, idx) => (
+                                              <span
+                                                key={idx}
+                                                className={
+                                                  fieldError.errorPosition !==
+                                                    undefined &&
+                                                  idx >=
+                                                    fieldError.errorPosition
+                                                    ? "text-green-700 font-extrabold bg-green-100 border-b-[3px] border-green-600 px-px rounded-sm"
+                                                    : "text-slate-700"
+                                                }
+                                              >
+                                                {char}
+                                              </span>
+                                            ))}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-yellow-800">
+                                {fieldError.message}
+                              </p>
+                            )}
+                            {fieldError.suggestion && (
+                              <button
+                                onClick={() => {
+                                  if (field.name === "accountNumber") {
+                                    const formatted = formatIBAN(
+                                      fieldError.suggestion!,
+                                    );
+                                    setAccountNumber(formatted);
+                                    if (fieldError.receiverName) {
+                                      setSuggestedReceiverName(
+                                        fieldError.receiverName,
+                                      );
+                                    }
+                                    setAccountNumberError(null);
+                                  } else if (field.name === "name") {
+                                    setRecipientName(fieldError.suggestion!);
+                                    setRecipientNameError(null);
+                                  }
+                                }}
+                                className="mt-2 px-2.5 py-1.5 text-xs font-semibold text-yellow-900 bg-yellow-100 hover:bg-yellow-200 rounded-md transition-colors"
+                              >
+                                Use{" "}
+                                {fieldError.receiverName
+                                  ? "their"
+                                  : "suggested"}{" "}
+                                {field.name === "accountNumber"
+                                  ? "account"
+                                  : "name"}
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
 
               {isComplete && (
                 <div className="p-4 bg-yellow-50 rounded-lg border-2 border-yellow-200">
@@ -899,11 +1179,27 @@ export default function SendMoneyPage({
                 </Button>
                 <Button
                   onClick={handleSend}
-                  disabled={!isComplete}
+                  disabled={
+                    !isComplete ||
+                    isValidatingPartial.accountNumber ||
+                    isValidatingPartial.recipientName ||
+                    isValidatingPartial.amount
+                  }
                   className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-bold py-3 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  <Send className="w-4 h-4" />
-                  Send Transfer
+                  {isValidatingPartial.accountNumber ||
+                  isValidatingPartial.recipientName ||
+                  isValidatingPartial.amount ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-slate-900 border-t-transparent rounded-full animate-spin" />
+                      Validating...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      Send Transfer
+                    </>
+                  )}
                 </Button>
               </div>
             </CardContent>
