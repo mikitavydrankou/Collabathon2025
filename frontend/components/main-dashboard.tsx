@@ -36,6 +36,7 @@ import SendMoneyPage from "@/components/send-money-page";
 import ChatbotScreen from "@/components/chatbot-screen";
 import QAChatbotScreen from "@/components/qa-chatbot-screen";
 import TransactionDetails from "@/components/transaction-details";
+import TransactionConfirmation from "@/components/transaction-confirmation";
 import NoConnectionPage from "@/components/no-connection-page";
 
 interface MainDashboardProps {
@@ -90,6 +91,7 @@ export default function MainDashboard({
     | "chatbot"
     | "qa-chatbot"
     | "transaction-details"
+    | "transaction-confirmation"
   >("dashboard");
   const [supportLevel, setSupportLevel] = useState<"full" | "partial" | "none">(
     "none",
@@ -108,6 +110,12 @@ export default function MainDashboard({
   );
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showAccessibilityPanel, setShowAccessibilityPanel] = useState(false);
+  const [chatbotTransactionData, setChatbotTransactionData] = useState<{
+    accountNumber: string;
+    recipientName: string;
+    amount: string;
+    title: string;
+  } | null>(null);
 
   // Check for offline mode on mount
   useEffect(() => {
@@ -311,6 +319,39 @@ export default function MainDashboard({
       <ChatbotScreen
         userId={userData?.user_id || 1}
         onBack={() => setCurrentPage("dashboard")}
+        onConfirmPayment={(transactionData) => {
+          // Extract and format data from transactionData
+          const accountNumber = transactionData?.recipient_account || "";
+          const recipientName = transactionData?.recipient_name || "";
+          // Convert amount to string (handle both Decimal, number, and string)
+          const amountValue = transactionData?.amount;
+          let amount = "";
+          if (amountValue != null) {
+            if (typeof amountValue === 'number') {
+              amount = amountValue.toString();
+            } else if (typeof amountValue === 'string') {
+              amount = amountValue;
+            } else {
+              // Handle Decimal or other types
+              amount = String(amountValue);
+            }
+          }
+          const title = transactionData?.transaction_text || "";
+
+          // Validate that we have all required data
+          if (!accountNumber || !recipientName || !amount) {
+            console.error("Missing transaction data:", transactionData);
+            return;
+          }
+
+          setChatbotTransactionData({
+            accountNumber,
+            recipientName,
+            amount,
+            title,
+          });
+          setCurrentPage("transaction-confirmation");
+        }}
       />
     );
   }
@@ -346,6 +387,28 @@ export default function MainDashboard({
       <TransactionDetails
         transaction={selectedTransaction}
         onBack={() => setCurrentPage("dashboard")}
+      />
+    );
+  }
+
+  if (currentPage === "transaction-confirmation" && chatbotTransactionData) {
+    return (
+      <TransactionConfirmation
+        onBack={() => {
+          setChatbotTransactionData(null);
+          setCurrentPage("chatbot");
+        }}
+        onConfirm={() => {
+          setChatbotTransactionData(null);
+          setCurrentPage("dashboard");
+          fetchTransactions(); // Refresh transactions after sending money
+          fetchBalance(); // Refresh balance after sending money
+        }}
+        accountNumber={chatbotTransactionData.accountNumber}
+        recipientName={chatbotTransactionData.recipientName}
+        amount={chatbotTransactionData.amount}
+        title={chatbotTransactionData.title}
+        userId={userData?.user_id || 1}
       />
     );
   }

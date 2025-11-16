@@ -209,6 +209,15 @@ class ChatbotService:
     def _handle_first_suggestion_response(cls, state: ChatbotState, action: Optional[str]) -> ChatbotMessageResponse:
         """Handle response to first suggestion."""
         if action == "accept":
+            # User accepted suggestion - copy data from first_suggestion to transaction_data
+            if state.first_suggestion:
+                state.transaction_data.recipient_account = state.first_suggestion.bank_account
+                state.transaction_data.recipient_name = state.first_suggestion.recipient_name
+                if state.first_suggestion.amount:
+                    state.transaction_data.amount = Decimal(str(state.first_suggestion.amount))
+                if state.first_suggestion.title:
+                    state.transaction_data.transaction_text = state.first_suggestion.title
+            
             # User accepted suggestion - go to payment confirmation
             state.stage = ChatbotStage.COMPLETED
             cls.update_session(state)

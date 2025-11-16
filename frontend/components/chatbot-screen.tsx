@@ -33,6 +33,7 @@ export default function ChatbotScreen({
   const [isLoading, setIsLoading] = useState(false);
   const [currentStage, setCurrentStage] = useState<string>("initial");
   const [transactionData, setTransactionData] = useState<any>(null);
+  const [currentSuggestion, setCurrentSuggestion] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageIdCounter = useRef(0);
   const [isRecording, setIsRecording] = useState(false);
@@ -162,6 +163,10 @@ export default function ChatbotScreen({
   const handleBotResponse = (response: any) => {
     setCurrentStage(response.stage);
     setTransactionData(response.transaction_data);
+    // Keep track of the latest suggestion
+    if (response.suggestion) {
+      setCurrentSuggestion(response.suggestion);
+    }
 
     addMessage({
       id: generateMessageId(),
@@ -176,8 +181,37 @@ export default function ChatbotScreen({
   };
 
   const handleConfirmPayment = () => {
-    if (onConfirmPayment && transactionData) {
-      onConfirmPayment(transactionData);
+    if (!onConfirmPayment) return;
+
+    // Use transaction_data if available, otherwise fall back to suggestion
+    let dataToUse = transactionData;
+    
+    // If transaction_data is empty or missing required fields, try to use suggestion
+    if (!dataToUse || 
+        Object.keys(dataToUse).length === 0 ||
+        !dataToUse.recipient_account || 
+        !dataToUse.recipient_name || 
+        !dataToUse.amount) {
+      // Try to find suggestion from the last message with showConfirmPayment
+      const lastMessageWithConfirm = [...messages].reverse().find(
+        (msg) => msg.showConfirmPayment && msg.suggestion
+      );
+      
+      const suggestionToUse = lastMessageWithConfirm?.suggestion || currentSuggestion;
+      
+      if (suggestionToUse) {
+        // Convert suggestion to transaction_data format
+        dataToUse = {
+          recipient_account: suggestionToUse.bank_account,
+          recipient_name: suggestionToUse.recipient_name,
+          amount: suggestionToUse.amount,
+          transaction_text: suggestionToUse.title,
+        };
+      }
+    }
+
+    if (dataToUse) {
+      onConfirmPayment(dataToUse);
     }
   };
 
