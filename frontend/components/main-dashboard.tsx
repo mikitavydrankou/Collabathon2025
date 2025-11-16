@@ -116,6 +116,13 @@ export default function MainDashboard({
     amount: string;
     title: string;
   } | null>(null);
+  const [showRepeatPaymentReminder, setShowRepeatPaymentReminder] = useState(false);
+  const [repeatPaymentData, setRepeatPaymentData] = useState<{
+    accountNumber: string;
+    recipientName: string;
+    amount: string;
+    title: string;
+  } | null>(null);
 
   // Check for offline mode on mount
   useEffect(() => {
@@ -305,11 +312,13 @@ export default function MainDashboard({
       <SendMoneyPage
         onBack={() => {
           setCurrentPage("dashboard");
+          setRepeatPaymentData(null); // Clear pre-filled data
           fetchTransactions(); // Refresh transactions after sending money
           fetchBalance(); // Refresh balance after sending money
         }}
         supportLevel={supportLevel}
         userData={userData}
+        prefillData={repeatPaymentData}
       />
     );
   }
@@ -425,9 +434,13 @@ export default function MainDashboard({
         {/* Greeting & Balance Card */}
         <Card className="bg-gradient-to-br from-white to-slate-50 border-0 shadow-sm">
           <CardContent className="pt-6">
-            <p className="text-sm text-slate-600 mb-2">
+            <button
+              onClick={() => setShowRepeatPaymentReminder(true)}
+              className="text-sm text-slate-600 mb-2 hover:text-slate-800 transition-colors cursor-pointer relative"
+              title="Repeat payment reminder"
+            >
               Total balance of all accounts:
-            </p>
+            </button>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-3xl font-bold text-slate-900">
                 {showBalance
@@ -1083,6 +1096,83 @@ export default function MainDashboard({
           }}
           initialStep={aiHelperInitialStep}
         />
+      )}
+
+      {/* Repeat Payment Reminder Popup */}
+      {showRepeatPaymentReminder && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/60 z-40"
+            onClick={() => setShowRepeatPaymentReminder(false)}
+          />
+          <div className="fixed inset-x-0 top-20 max-w-md mx-auto z-50">
+            <div className="mx-4 bg-white rounded-2xl shadow-2xl p-6 animate-in fade-in slide-in-from-top-2">
+              <div className="flex flex-col items-center text-center mb-4">
+                <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-4">
+                  <Clock className="w-8 h-8 text-blue-600" />
+                </div>
+                <h3 className="font-semibold text-slate-900 text-xl mb-2">
+                  Repeat Payment Reminder
+                </h3>
+                <p className="text-sm text-slate-500">
+                  You have a recurring payment to make
+                </p>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-4 mb-6 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-600">Recipient:</span>
+                  <span className="text-sm font-semibold text-slate-900">
+                    Kate Davis
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-600">Amount:</span>
+                  <span className="text-sm font-semibold text-slate-900">
+                    200.00 zł
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-600">Description:</span>
+                  <span className="text-sm font-semibold text-slate-900">
+                    birthday gift for niece
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-600">Last payment:</span>
+                  <span className="text-sm text-slate-500">
+                    November 16, 2024
+                  </span>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3">
+                <Button
+                  onClick={() => {
+                    setShowRepeatPaymentReminder(false);
+                    // Set pre-filled data and navigate to send-money page
+                    setRepeatPaymentData({
+                      accountNumber: "4276987654321098",
+                      recipientName: "Kate Davis",
+                      amount: "200.00",
+                      title: "birthday gift for niece",
+                    });
+                    setSupportLevel("none");
+                    setCurrentPage("send-money");
+                  }}
+                  className="w-full bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-semibold"
+                >
+                  Repeat This Payment
+                </Button>
+                <Button
+                  onClick={() => setShowRepeatPaymentReminder(false)}
+                  variant="outline"
+                  className="w-full border-slate-300 text-slate-700 hover:bg-slate-50"
+                >
+                  Maybe Later
+                </Button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Connection Restored Popup */}

@@ -25,6 +25,12 @@ interface SendMoneyPageProps {
     balance: number;
     bank_number: string;
   };
+  prefillData?: {
+    accountNumber?: string;
+    recipientName?: string;
+    amount?: string;
+    title?: string;
+  } | null;
 }
 
 interface ValidationError {
@@ -40,6 +46,7 @@ export default function SendMoneyPage({
   onBack,
   supportLevel = "none",
   userData,
+  prefillData,
 }: SendMoneyPageProps) {
   const [currentFieldIndex, setCurrentFieldIndex] = useState(0);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -90,8 +97,19 @@ export default function SendMoneyPage({
     return formatted;
   };
 
-  // Restore draft from localStorage on mount
+  // Restore draft from localStorage on mount or use prefillData
   useEffect(() => {
+    // First check for prefillData (from reminder popup)
+    if (prefillData) {
+      if (prefillData.accountNumber)
+        setAccountNumber(formatIBAN(prefillData.accountNumber));
+      if (prefillData.recipientName) setRecipientName(prefillData.recipientName);
+      if (prefillData.amount) setAmount(prefillData.amount);
+      if (prefillData.title) setTitle(prefillData.title);
+      return; // Don't check localStorage if we have prefillData
+    }
+
+    // Otherwise, check for draft in localStorage
     const draftStr = localStorage.getItem("transferDraft");
     if (draftStr) {
       try {
@@ -122,7 +140,7 @@ export default function SendMoneyPage({
         console.error("Failed to restore draft:", e);
       }
     }
-  }, [supportLevel]);
+  }, [supportLevel, prefillData]);
 
   const fields = [
     {
