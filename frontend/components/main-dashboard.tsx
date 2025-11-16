@@ -350,7 +350,12 @@ export default function MainDashboard({
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
       {/* Main Content */}
-      <div className="max-w-md mx-auto px-4 py-6 space-y-6 pb-32">
+      <div
+        className="max-w-md mx-auto px-4 py-6 space-y-6"
+        style={{
+          paddingBottom: "calc(8rem + env(safe-area-inset-bottom, 0px))",
+        }}
+      >
         {/* Greeting & Balance Card */}
         <Card className="bg-gradient-to-br from-white to-slate-50 border-0 shadow-sm">
           <CardContent className="pt-6">
@@ -709,7 +714,14 @@ export default function MainDashboard({
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800">
+      <div
+        className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 z-50"
+        style={{
+          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+          paddingLeft: "env(safe-area-inset-left, 0px)",
+          paddingRight: "env(safe-area-inset-right, 0px)",
+        }}
+      >
         <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-around">
           {[
             { icon: Home, label: "Overview", active: true },

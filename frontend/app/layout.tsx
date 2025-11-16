@@ -9,11 +9,8 @@ export const metadata: Metadata = {
   title: "Commerzbank - Mobile Banking",
   description: "Secure online banking with Commerzbank",
   generator: "v0.app",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    userScalable: false,
-  },
+  viewport:
+    "width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no",
   icons: {
     icon: [
       {
@@ -40,7 +37,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`font-sans antialiased`}>{children}</body>
+      <head>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta
+          name="apple-mobile-web-app-status-bar-style"
+          content="black-translucent"
+        />
+      </head>
+      <body
+        className={`font-sans antialiased`}
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        {children}
+      </body>
     </html>
   );
 }
