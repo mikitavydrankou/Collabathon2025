@@ -101,6 +101,8 @@ export default function MainDashboard({
   const [qaInitialMessage, setQaInitialMessage] = useState<string | undefined>(
     undefined,
   );
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showAccessibilityPanel, setShowAccessibilityPanel] = useState(false);
 
   // Check for offline mode on mount
   useEffect(() => {
@@ -723,7 +725,11 @@ export default function MainDashboard({
               action: onNavigateTransaction,
             },
             { icon: BarChart3, label: "Exchange" },
-            { icon: MoreVertical, label: "More" },
+            {
+              icon: MoreVertical,
+              label: "More",
+              action: () => setShowMoreMenu(true),
+            },
           ].map((item, idx) => (
             <button
               key={idx}
@@ -740,6 +746,231 @@ export default function MainDashboard({
           ))}
         </div>
       </div>
+
+      {/* More Menu */}
+      {showMoreMenu && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setShowMoreMenu(false)}
+          />
+          <div className="fixed bottom-20 right-4 z-50 w-64 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-scale-up">
+            <div className="p-3 space-y-1">
+              <button
+                onClick={() => {
+                  setShowMoreMenu(false);
+                  setShowAccessibilityPanel(true);
+                }}
+                className="w-full flex items-center gap-3 p-3 hover:bg-slate-50 rounded-lg transition-colors text-left group"
+              >
+                <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center group-hover:bg-yellow-200 transition-colors">
+                  <svg
+                    className="w-4 h-4 text-yellow-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                    />
+                  </svg>
+                </div>
+                <span className="text-slate-900 font-medium text-sm">
+                  Accessibility
+                </span>
+              </button>
+
+              <button className="w-full flex items-center gap-3 p-3 hover:bg-slate-50 rounded-lg transition-colors text-left group">
+                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-slate-200 transition-colors">
+                  <svg
+                    className="w-4 h-4 text-slate-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                  </svg>
+                </div>
+                <span className="text-slate-900 font-medium text-sm">
+                  Settings
+                </span>
+              </button>
+
+              <button className="w-full flex items-center gap-3 p-3 hover:bg-slate-50 rounded-lg transition-colors text-left group">
+                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-slate-200 transition-colors">
+                  <svg
+                    className="w-4 h-4 text-slate-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+                <span className="text-slate-900 font-medium text-sm">
+                  Help & Support
+                </span>
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Accessibility Panel */}
+      {showAccessibilityPanel && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setShowAccessibilityPanel(false)}
+          />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-96 max-h-[85vh] bg-white rounded-2xl shadow-2xl overflow-hidden animate-scale-up">
+            <div className="sticky top-0 bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-slate-900">
+                Accessibility
+              </h2>
+              <button
+                onClick={() => setShowAccessibilityPanel(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="overflow-y-auto max-h-[calc(85vh-120px)] p-5 space-y-5">
+              {/* Contrast */}
+              <div>
+                <h3 className="text-sm font-medium text-slate-700 mb-2">
+                  Contrast
+                </h3>
+                <div className="flex gap-2">
+                  <button className="flex-1 px-3 py-2 bg-yellow-50 border-2 border-yellow-400 rounded-lg text-xs font-medium text-slate-900 transition-colors">
+                    Normal
+                  </button>
+                  <button className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-lg text-xs font-medium text-slate-700 transition-colors">
+                    High
+                  </button>
+                  <button className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-lg text-xs font-medium text-slate-700 transition-colors">
+                    Extra
+                  </button>
+                </div>
+              </div>
+
+              {/* Font Size */}
+              <div>
+                <h3 className="text-sm font-medium text-slate-700 mb-2">
+                  Font Size
+                </h3>
+                <div className="grid grid-cols-4 gap-2">
+                  <button className="px-3 py-2 bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-lg text-xs font-medium text-slate-700 transition-colors">
+                    S
+                  </button>
+                  <button className="px-3 py-2 bg-yellow-50 border-2 border-yellow-400 rounded-lg text-sm font-medium text-slate-900 transition-colors">
+                    M
+                  </button>
+                  <button className="px-3 py-2 bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-lg text-base font-medium text-slate-700 transition-colors">
+                    L
+                  </button>
+                  <button className="px-3 py-2 bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-lg text-lg font-medium text-slate-700 transition-colors">
+                    XL
+                  </button>
+                </div>
+              </div>
+
+              {/* Toggles */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between py-2">
+                  <span className="text-sm text-slate-700">Text Spacing</span>
+                  <button className="w-11 h-6 bg-slate-200 rounded-full relative transition-colors">
+                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow transition-transform"></div>
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between py-2">
+                  <span className="text-sm text-slate-700">Bold Text</span>
+                  <button className="w-11 h-6 bg-slate-200 rounded-full relative transition-colors">
+                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow transition-transform"></div>
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between py-2">
+                  <span className="text-sm text-slate-700">Screen Reader</span>
+                  <button className="w-11 h-6 bg-slate-200 rounded-full relative transition-colors">
+                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow transition-transform"></div>
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between py-2">
+                  <span className="text-sm text-slate-700">Reduce Motion</span>
+                  <button className="w-11 h-6 bg-slate-200 rounded-full relative transition-colors">
+                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow transition-transform"></div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Color Blind Mode */}
+              <div>
+                <h3 className="text-sm font-medium text-slate-700 mb-2">
+                  Color Blind Mode
+                </h3>
+                <div className="space-y-2">
+                  <button className="w-full px-3 py-2 bg-yellow-50 border-2 border-yellow-400 rounded-lg text-left text-sm text-slate-900 transition-colors">
+                    Off
+                  </button>
+                  <button className="w-full px-3 py-2 bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-lg text-left text-sm text-slate-700 transition-colors">
+                    Protanopia
+                  </button>
+                  <button className="w-full px-3 py-2 bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-lg text-left text-sm text-slate-700 transition-colors">
+                    Deuteranopia
+                  </button>
+                  <button className="w-full px-3 py-2 bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-lg text-left text-sm text-slate-700 transition-colors">
+                    Tritanopia
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="sticky bottom-0 bg-white border-t border-slate-200 p-4">
+              <button
+                onClick={() => setShowAccessibilityPanel(false)}
+                className="w-full bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-medium py-2.5 rounded-lg transition-colors text-sm"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* AI Helper Popup */}
       {showAIHelper && (
