@@ -60,51 +60,37 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-slate-800 via-slate-700 to-slate-600">
-      <div className="px-4 pt-4 pb-3">
-        <div className="flex justify-center mb-3">
-          <svg
-            className="w-10 h-10"
-            viewBox="0 0 100 100"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M50 10L80 30L80 70L50 90L20 70L20 30Z"
-              fill="#FBBF24"
-              stroke="#FBBF24"
-              strokeWidth="2"
-            />
-            <path
-              d="M50 35L65 45L65 65L50 75L35 65L35 45Z"
-              fill="none"
-              stroke="#1F2937"
-              strokeWidth="2"
-            />
-          </svg>
+    <div className="min-h-screen flex flex-col bg-slate-50">
+      <div className="px-4 pt-6 pb-6 bg-white shadow-md">
+        <div className="flex justify-center mb-6">
+          <img
+            src="/Commerzbank-logo.png"
+            alt="Commerzbank Logo"
+            className="h-20 w-auto object-contain"
+          />
         </div>
 
         {/* User and Welcome Message Side by Side */}
         <div className="flex items-center justify-between gap-4">
           {/* User Info on Left */}
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center shadow-xl flex-shrink-0">
+            <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center shadow-lg flex-shrink-0">
               <span className="text-slate-900 text-base font-bold">AB</span>
             </div>
             <div className="text-left">
-              <h2 className="text-white text-sm font-bold leading-tight">
+              <h2 className="text-slate-900 text-sm font-bold leading-tight">
                 Alex Brown
               </h2>
-              <p className="text-slate-300 text-xs font-medium">Welcome back</p>
+              <p className="text-slate-600 text-xs font-medium">Welcome back</p>
             </div>
           </div>
 
           {/* Welcome Message on Right */}
           <div className="text-right">
-            <p className="text-xs font-light tracking-wide text-slate-300 mb-0.5">
+            <p className="text-xs font-light tracking-wide text-slate-600 mb-0.5">
               Welcome to
             </p>
-            <p className="text-lg font-bold tracking-tight text-white">
+            <p className="text-lg font-bold tracking-tight text-slate-900">
               Commerzbank
             </p>
           </div>
@@ -112,7 +98,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 bg-slate-50 rounded-t-[2rem] px-5 pb-3 shadow-2xl flex flex-col">
+      <div className="flex-1 bg-slate-50 px-5 pb-3 flex flex-col">
         {/* Spacer to push content down */}
         <div className="flex-1" />
 
