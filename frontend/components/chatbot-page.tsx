@@ -7,6 +7,7 @@ import TransactionConfirmation from "./transaction-confirmation";
 
 interface ChatbotPageProps {
   onBack: () => void;
+  userId: number;
 }
 
 interface Message {
@@ -14,7 +15,7 @@ interface Message {
   text: string;
 }
 
-export default function ChatbotPage({ onBack }: ChatbotPageProps) {
+export default function ChatbotPage({ onBack, userId }: ChatbotPageProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       type: "bot",
@@ -150,6 +151,7 @@ export default function ChatbotPage({ onBack }: ChatbotPageProps) {
         recipientName={recipientName}
         amount={amount}
         title={title}
+        userId={userId}
       />
     );
   }
