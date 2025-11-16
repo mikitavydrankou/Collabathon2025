@@ -33,6 +33,7 @@ import AIHelperPopup from "@/components/ai-helper-popup";
 import SendMoneyPage from "@/components/send-money-page";
 import ChatbotScreen from "@/components/chatbot-screen";
 import TransactionDetails from "@/components/transaction-details";
+import NoConnectionPage from "@/components/no-connection-page";
 
 interface MainDashboardProps {
   userData: any;
@@ -90,6 +91,36 @@ export default function MainDashboard({
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [totalBalance, setTotalBalance] = useState<number>(0);
   const [loadingBalance, setLoadingBalance] = useState(false);
+  const [showNoConnection, setShowNoConnection] = useState(false);
+  const [showConnectionRestored, setShowConnectionRestored] = useState(false);
+  const [hasDraft, setHasDraft] = useState(false);
+
+  // Check for offline mode on mount
+  useEffect(() => {
+    const offlineMode = localStorage.getItem("offlineMode");
+    const draft = localStorage.getItem("transferDraft");
+
+    if (offlineMode === "true") {
+      setShowNoConnection(true);
+      setHasDraft(!!draft);
+    }
+  }, []);
+
+  // Check for offline mode when returning to dashboard
+  useEffect(() => {
+    if (currentPage === "dashboard") {
+      const offlineMode = localStorage.getItem("offlineMode");
+      const draft = localStorage.getItem("transferDraft");
+
+      console.log("🔍 Dashboard Check:", { offlineMode, hasDraft: !!draft });
+
+      if (offlineMode === "true") {
+        console.log("🔴 Showing No Connection Page");
+        setShowNoConnection(true);
+        setHasDraft(!!draft);
+      }
+    }
+  }, [currentPage]);
 
   useEffect(() => {
     if (userData?.user_id) {
@@ -104,10 +135,14 @@ export default function MainDashboard({
       const response = await fetch(
         `http://localhost:8000/auth/user/${userData.user_id}/balance`,
       );
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const data = await response.json();
       setTotalBalance(data.balance || 0);
     } catch (error) {
       console.error("Error fetching balance:", error);
+      setTotalBalance(0); // Set default balance on error
     } finally {
       setLoadingBalance(false);
     }
@@ -119,10 +154,14 @@ export default function MainDashboard({
       const response = await fetch(
         `http://localhost:8000/transactions/${userData.user_id}?limit=10`,
       );
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const data = await response.json();
       setTransactions(data.transactions || []);
     } catch (error) {
       console.error("Error fetching transactions:", error);
+      setTransactions([]); // Set empty array on error
     } finally {
       setLoadingTransactions(false);
     }
@@ -145,6 +184,39 @@ export default function MainDashboard({
       setCurrentPage("send-money");
       setShowAIHelper(false);
     }
+  };
+
+  const handleRefreshConnection = () => {
+    // User clicked refresh button on no-connection page
+    console.log("🔄 Refresh clicked - starting 3s timer");
+    setShowNoConnection(false);
+    localStorage.removeItem("offlineMode");
+
+    const draft = localStorage.getItem("transferDraft");
+    console.log("📝 Draft exists:", !!draft);
+
+    // Update hasDraft state
+    setHasDraft(!!draft);
+
+    // Start 3-second timer to show connection restored popup
+    setTimeout(() => {
+      console.log("✅ Timer complete - showing popup");
+      console.log("📋 hasDraft state before showing popup:", !!draft);
+      setShowConnectionRestored(true);
+    }, 3000);
+  };
+
+  const handleReturnToDraft = () => {
+    console.log("📄 Continuing with draft");
+    setShowConnectionRestored(false);
+    setSupportLevel("none");
+    setCurrentPage("send-money");
+  };
+
+  const handleDiscardDraft = () => {
+    setShowConnectionRestored(false);
+    localStorage.removeItem("transferDraft");
+    setHasDraft(false);
   };
 
   const handleTransactionClick = (transaction: Transaction) => {
@@ -175,6 +247,16 @@ export default function MainDashboard({
       minimumFractionDigits: 2,
     }).format(amount);
   };
+
+  // Show No Connection page if offline mode is active
+  if (showNoConnection) {
+    return (
+      <NoConnectionPage
+        onRefresh={handleRefreshConnection}
+        hasDraft={hasDraft}
+      />
+    );
+  }
 
   if (currentPage === "send-money") {
     return (
@@ -598,6 +680,76 @@ export default function MainDashboard({
           onClose={() => setShowAIHelper(false)}
           onSelectOption={handleAIOption}
         />
+      )}
+
+      {/* Connection Restored Popup */}
+      {showConnectionRestored && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/60 z-40"
+            onClick={() => setShowConnectionRestored(false)}
+          />
+
+          {/* Popup Container */}
+          <div className="fixed inset-x-0 top-20 max-w-md mx-auto z-50">
+            <div className="mx-4 bg-white rounded-2xl shadow-2xl p-6 animate-in fade-in slide-in-from-top-2">
+              <div className="flex flex-col items-center text-center mb-4">
+                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4 animate-pulse">
+                  <svg
+                    className="w-8 h-8 text-green-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                </div>
+                <h3 className="font-semibold text-slate-900 text-xl mb-2">
+                  Connection Restored
+                </h3>
+                <p className="text-sm text-slate-500">You're back online!</p>
+              </div>
+              <p className="text-sm text-slate-600 mb-6 text-center">
+                Your internet connection has been restored.
+                {hasDraft && " You have a saved draft waiting to be completed."}
+              </p>
+              {hasDraft && (
+                <div className="bg-yellow-50 rounded-lg p-4 mb-6 border-2 border-yellow-200">
+                  <p className="text-xs font-semibold text-slate-700 mb-2">
+                    📝 Draft Available
+                  </p>
+                  <p className="text-xs text-slate-600">
+                    You have an incomplete transfer that was saved when the
+                    connection was lost.
+                  </p>
+                </div>
+              )}
+              <div className="flex flex-col gap-3">
+                {hasDraft && (
+                  <Button
+                    onClick={handleReturnToDraft}
+                    className="w-full bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-semibold"
+                  >
+                    Continue with Draft
+                  </Button>
+                )}
+                <Button
+                  onClick={handleDiscardDraft}
+                  variant="outline"
+                  className="w-full border-slate-300 text-slate-700 hover:bg-slate-50"
+                >
+                  {hasDraft ? "Discard Draft" : "Close"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

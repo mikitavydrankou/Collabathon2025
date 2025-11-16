@@ -41,6 +41,7 @@ export default function SendMoneyPage({
 }: SendMoneyPageProps) {
   const [currentFieldIndex, setCurrentFieldIndex] = useState(0);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [showSimplePopup, setShowSimplePopup] = useState(false);
 
   const [accountNumber, setAccountNumber] = useState("");
   const [recipientName, setRecipientName] = useState("");
@@ -53,11 +54,40 @@ export default function SendMoneyPage({
   const [hasSeenError, setHasSeenError] = useState(false);
   const [suggestedReceiverName, setSuggestedReceiverName] =
     useState<string>("");
+  const [showDraftRestored, setShowDraftRestored] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
 
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   // Get user ID from userData or fallback to 1
   const userId = userData?.user_id || 1;
+
+  // Restore draft from localStorage on mount
+  useEffect(() => {
+    const draftStr = localStorage.getItem("transferDraft");
+    if (draftStr) {
+      try {
+        const draft = JSON.parse(draftStr);
+        if (draft.accountNumber) setAccountNumber(draft.accountNumber);
+        if (draft.recipientName) setRecipientName(draft.recipientName);
+        if (draft.amount) setAmount(draft.amount);
+        if (draft.title) setTitle(draft.title);
+
+        // Show notification that draft was restored
+        setShowDraftRestored(true);
+
+        // Hide notification after 5 seconds
+        setTimeout(() => {
+          setShowDraftRestored(false);
+        }, 5000);
+
+        // Clear draft from localStorage after restoring
+        localStorage.removeItem("transferDraft");
+      } catch (e) {
+        console.error("Failed to restore draft:", e);
+      }
+    }
+  }, []);
 
   const fields = [
     {
@@ -698,7 +728,17 @@ export default function SendMoneyPage({
         ) : (
           <Card className="bg-white border-0 shadow-lg">
             <CardHeader className="pb-6">
-              <CardTitle className="text-2xl">Transfer Details</CardTitle>
+              <button
+                onClick={() => {
+                  // Add delay before showing popup (500ms)
+                  setTimeout(() => {
+                    setShowSimplePopup(true);
+                  }, 500);
+                }}
+                className="text-left w-full hover:opacity-80 transition-opacity cursor-pointer bg-transparent border-none p-0"
+              >
+                <CardTitle className="text-2xl">Transfer Details</CardTitle>
+              </button>
               <p className="text-sm text-slate-500 mt-2">
                 Fill in the information below to send money
               </p>
@@ -717,8 +757,31 @@ export default function SendMoneyPage({
                       value={field.value}
                       onChange={(e) => field.setValue(e.target.value)}
                       placeholder={field.placeholder}
-                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-lg text-base transition-all focus:outline-none focus:border-yellow-400 bg-white hover:border-slate-300"
+                      className={`w-full px-4 py-3 border-2 rounded-lg text-base transition-all focus:outline-none bg-white ${
+                        showDraftRestored && field.value
+                          ? "border-green-500 focus:border-green-600 animate-pulse"
+                          : "border-slate-200 focus:border-yellow-400 hover:border-slate-300"
+                      }`}
                     />
+                    {showDraftRestored && field.value && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+                          <svg
+                            className="w-4 h-4 text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -776,6 +839,160 @@ export default function SendMoneyPage({
           </Card>
         )}
       </div>
+
+      {/* Draft Restored Notification - Bottom Right */}
+      {showDraftRestored && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-2">
+          <div className="bg-green-500 text-white px-4 py-3 rounded-lg shadow-2xl flex items-center gap-3 max-w-sm">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+              <svg
+                className="w-5 h-5 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-sm">Draft Restored!</p>
+              <p className="text-xs text-white/90">
+                Data recovered successfully
+              </p>
+            </div>
+            <button
+              onClick={() => setShowDraftRestored(false)}
+              className="hover:bg-white/20 rounded p-1 transition-colors"
+            >
+              <svg
+                className="w-4 h-4 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Connection Lost Popup */}
+      {showSimplePopup && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/60 z-40"
+            onClick={() => setShowSimplePopup(false)}
+          />
+
+          {/* Popup Container */}
+          <div className="fixed inset-x-0 top-20 max-w-md mx-auto z-50">
+            <div className="mx-4 bg-white rounded-2xl shadow-2xl p-6 animate-in fade-in slide-in-from-top-2">
+              <div className="flex flex-col items-center text-center mb-4">
+                <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                  <AlertCircle className="w-8 h-8 text-red-600" />
+                </div>
+                <h3 className="font-semibold text-slate-900 text-xl mb-2">
+                  Connection Lost
+                </h3>
+                <p className="text-sm text-slate-500">No internet connection</p>
+              </div>
+              <p className="text-sm text-slate-600 mb-6 text-center">
+                Your internet connection was interrupted. Would you like to save
+                your progress as a draft and continue when connection is
+                restored?
+              </p>
+              <div className="bg-slate-50 rounded-lg p-4 mb-6 space-y-2">
+                <p className="text-xs font-semibold text-slate-700">
+                  Draft will include:
+                </p>
+                {accountNumber && (
+                  <div className="flex items-center gap-2 text-xs text-slate-600">
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                    Account: {accountNumber}
+                  </div>
+                )}
+                {recipientName && (
+                  <div className="flex items-center gap-2 text-xs text-slate-600">
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                    Recipient: {recipientName}
+                  </div>
+                )}
+                {amount && (
+                  <div className="flex items-center gap-2 text-xs text-slate-600">
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                    Amount: {amount} zł
+                  </div>
+                )}
+                {title && (
+                  <div className="flex items-center gap-2 text-xs text-slate-600">
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                    Title: {title}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col gap-3">
+                <Button
+                  onClick={() => {
+                    setIsSavingDraft(true);
+
+                    // Add 1 second delay before saving
+                    setTimeout(() => {
+                      // Save draft to localStorage
+                      const draft = {
+                        accountNumber,
+                        recipientName,
+                        amount,
+                        title,
+                        timestamp: Date.now(),
+                      };
+                      localStorage.setItem(
+                        "transferDraft",
+                        JSON.stringify(draft),
+                      );
+                      // Set offline flag
+                      localStorage.setItem("offlineMode", "true");
+                      // Close popup and redirect
+                      setShowSimplePopup(false);
+                      setIsSavingDraft(false);
+                      onBack();
+                    }, 1000);
+                  }}
+                  disabled={isSavingDraft}
+                  className="w-full bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isSavingDraft ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-slate-900 border-t-transparent rounded-full animate-spin" />
+                      Saving Draft...
+                    </>
+                  ) : (
+                    "Save Draft & Continue"
+                  )}
+                </Button>
+                <Button
+                  onClick={() => setShowSimplePopup(false)}
+                  variant="outline"
+                  className="w-full border-slate-300 text-slate-700 hover:bg-slate-50"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
