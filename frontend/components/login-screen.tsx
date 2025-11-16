@@ -159,11 +159,6 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
         {/* Spacer to push footer down */}
         <div className="flex-1" />
 
-        {/* Fingerprint Logo (centered, decorative) */}
-        <div className="flex justify-center mb-2 mt-2">
-          <Fingerprint size={64} strokeWidth={2.5} className="text-yellow-400 drop-shadow-lg" />
-        </div>
-
         {/* Quick Actions */}
         <div className="flex justify-center items-center gap-8 pt-3 border-t-2 border-slate-200">
           <button
