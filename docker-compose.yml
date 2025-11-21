@@ -50,7 +50,10 @@ services:
       - .env
     networks:
       - collabathon-net
-
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USERNAME} -d ${DATABASE_NAME}"]
+      interval: 5s
+      retries: 5
 
   pgweb:
     image: sosedoff/pgweb
@@ -60,7 +63,8 @@ services:
     environment:
       - PGWEB_DATABASE_URL=postgres://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@db:5432/${DATABASE_NAME}?sslmode=disable
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     env_file:
       - .env
     networks:
