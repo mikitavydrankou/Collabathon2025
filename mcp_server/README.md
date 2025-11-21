@@ -318,7 +318,7 @@ services:
   db:
     image: postgres:17
     ports:
-      - "5433:5432"
+      - "5432:5432"
 
   mcp:
     build:
