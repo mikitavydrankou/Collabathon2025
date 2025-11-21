@@ -11,6 +11,10 @@ services:
     restart: unless-stopped
     depends_on:
       - backend
+    networks:
+      - collabathon-net
+
+
   backend:
     build: .
     environment:
@@ -28,6 +32,10 @@ services:
     restart: unless-stopped
     depends_on:
       - db
+    networks:
+      - collabathon-net
+
+
   db:
     image: postgres:17
     environment:
@@ -40,6 +48,9 @@ services:
       - postgres_data:/var/lib/postgresql/data
     env_file:
       - .env
+    networks:
+      - collabathon-net
+
 
   pgweb:
     image: sosedoff/pgweb
@@ -52,6 +63,9 @@ services:
       - db
     env_file:
       - .env
+    networks:
+      - collabathon-net
+
 
   mcp:
     build:
@@ -70,6 +84,13 @@ services:
       - db
     env_file:
       - .env
+    networks:
+      - collabathon-net
+
 
 volumes:
   postgres_data:
+
+networks:
+  collabathon-net:
+    driver: bridge
