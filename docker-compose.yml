@@ -58,7 +58,7 @@ services:
     ports:
       - "8080:8081"
     environment:
-      - DATABASE_URL=postgres://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@db:5432/${DATABASE_NAME}?sslmode=disable
+      - PGWEB_DATABASE_URL=postgres://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@db:5432/${DATABASE_NAME}?sslmode=disable
     depends_on:
       - db
     env_file:
@@ -93,4 +93,4 @@ volumes:
 
 networks:
   collabathon-net:
-    driver: bridge
+    driver: bridge 
