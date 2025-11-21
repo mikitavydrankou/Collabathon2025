@@ -1,6 +1,10 @@
 [project]
 name = "backend"
 version = "0.1.0"
+description = "Beszketnyky collabothon 2025"
+authors = [
+    { name = "Bezketnyky", email = "boss@email.com" }
+]
 requires-python = ">=3.10"
 dependencies = [
     "fastapi>=0.104.0",
