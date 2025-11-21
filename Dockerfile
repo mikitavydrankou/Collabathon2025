@@ -15,4 +15,4 @@ COPY backend ./
 
 EXPOSE 8000
 
-CMD ["poetry", "run", "dev"]
+CMD ["poetry", "run", "start"]
