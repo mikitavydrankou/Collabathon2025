@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "embedding-worker"
+version = "0.1.0"
+description = "Consumes transaction events and indexes embeddings in Chroma"
+authors = ["Bezketnyky <boss@email.com>"]
+packages = [{ include = "embedding_worker" }]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4.0"
+openai = ">=1.0.0"
+chromadb-client = ">=0.5.0"
+shared = { path = "../../shared-lib", develop = true }
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

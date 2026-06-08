@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "shared"
+version = "0.1.0"
+description = "EasyFocus shared library: models, db, security, messaging, app factory"
+authors = ["Bezketnyky <boss@email.com>"]
+packages = [{ include = "shared" }]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4.0"
+fastapi = ">=0.104.0"
+sqlalchemy = ">=2.0.44,<3.0.0"
+psycopg2-binary = ">=2.9.9"
+python-jose = { extras = ["cryptography"], version = ">=3.5.0,<4.0.0" }
+bcrypt = ">=4.0.0"
+python-dotenv = ">=1.0.0"
+prometheus-fastapi-instrumentator = ">=7.0.0"
+confluent-kafka = ">=2.3.0"
+langchain-core = { version = ">=0.1.0", optional = true }
+langchain-openai = { version = ">=0.0.5", optional = true }
+
+[tool.poetry.extras]
+llm = ["langchain-core", "langchain-openai"]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

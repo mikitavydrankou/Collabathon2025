@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "qa-svc"
+version = "0.1.0"
+description = "QA service (RAG + SQL agents)"
+authors = ["Bezketnyky <boss@email.com>"]
+packages = [{ include = "qa_svc" }]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4.0"
+uvicorn = { extras = ["standard"], version = ">=0.24.0" }
+openai = ">=1.0.0"
+httpx = ">=0.25.0"
+chromadb-client = ">=0.5.0"
+shared = { path = "../../shared-lib", develop = true, extras = ["llm"] }
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

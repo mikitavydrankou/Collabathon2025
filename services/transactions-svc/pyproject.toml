@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "transactions-svc"
+version = "0.1.0"
+description = "Transactions and validation service"
+authors = ["Bezketnyky <boss@email.com>"]
+packages = [{ include = "transactions_svc" }]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4.0"
+uvicorn = { extras = ["standard"], version = ">=0.24.0" }
+numpy = "<2.0.0"
+requests = ">=2.31.0"
+shared = { path = "../../shared-lib", develop = true }
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
