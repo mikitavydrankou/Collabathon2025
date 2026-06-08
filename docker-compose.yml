@@ -25,6 +25,9 @@ services:
       DATABASE_PASSWORD: ${DATABASE_PASSWORD}
       MCP_SERVER_URL: ${MCP_SERVER_URL}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      SEED_ON_START: ${SEED_ON_START}
+      CORS_ORIGINS: ${CORS_ORIGINS}
     env_file:
       - .env
     ports:

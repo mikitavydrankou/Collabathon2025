@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -11,10 +13,13 @@ from backend.utils.routes import router as utils_router
 
 app = FastAPI()
 
+# CORS origins from env (comma-separated). Wildcard "*" is invalid together with
+# credentials, so credentials are only enabled for explicit origins.
+_cors_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials="*" not in _cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -32,7 +37,10 @@ def startup():
     try:
         init_db()
         print("✓ Database initialized")
-        seed_database()
+        if os.getenv("SEED_ON_START", "false").lower() in ("1", "true", "yes"):
+            seed_database()
+        else:
+            print("⏭ SEED_ON_START not set — skipping seed")
     except Exception as e:
         print(f"✗ DB init failed: {e}")
 
