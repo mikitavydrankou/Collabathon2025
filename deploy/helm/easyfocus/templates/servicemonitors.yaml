@@ -1,0 +1,22 @@
+{{- if .Values.monitoring.serviceMonitors }}
+{{- range $name, $svc := .Values.backends }}
+{{- if $svc.metrics }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ $name }}
+  labels:
+    app: {{ $name }}
+    release: {{ $.Values.monitoring.releaseLabel }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ $name }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+{{- end }}
+{{- end }}
+{{- end }}

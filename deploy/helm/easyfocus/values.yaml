@@ -50,15 +50,19 @@ backends:
   auth-svc:
     image: collabathon2025-auth-svc
     port: 8000
+    metrics: true   # app_factory exposes /metrics (prometheus-fastapi-instrumentator)
   transactions-svc:
     image: collabathon2025-transactions-svc
     port: 8000
+    metrics: true
   chatbot-svc:
     image: collabathon2025-chatbot-svc
     port: 8000
+    metrics: true
   qa-svc:
     image: collabathon2025-qa-svc
     port: 8000
+    metrics: true
   mcp:
     image: collabathon2025-mcp
     port: 8001
@@ -161,3 +165,12 @@ edge:
 # kafka-ui / pgweb — off by default.
 devtools:
   enabled: false
+
+# Prometheus Operator ServiceMonitors for the FastAPI backends (metrics: true).
+# Requires the monitoring.coreos.com CRDs (kube-prometheus-stack) in the cluster.
+monitoring:
+  serviceMonitors: true
+  # kafka-exporter (consumer lag) + postgres-exporter, deployed alongside the app.
+  exporters: true
+  # Cosmetic label only; Prometheus picks ServiceMonitors via empty selector.
+  releaseLabel: kube-prometheus-stack

@@ -57,6 +57,7 @@ spec:
   selector:
     app: {{ $name }}
   ports:
-    - port: {{ $svc.port }}
+    - name: http
+      port: {{ $svc.port }}
       targetPort: {{ $svc.port }}
 {{- end }}
