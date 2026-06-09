@@ -119,3 +119,17 @@ jobs:
             ${{ env.REGISTRY }}/${{ steps.owner.outputs.name }}/${{ matrix.image }}:${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+      # Scan the freshly-pushed image for known CVEs. Report-only for now
+      # (exit-code 0); flip to "1" to make CRITICAL/HIGH findings fail the build.
+      - name: Trivy scan ${{ matrix.image }}
+        uses: aquasecurity/trivy-action@0.29.0
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ steps.owner.outputs.name }}/${{ matrix.image }}:${{ github.sha }}
+          format: table
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "0"

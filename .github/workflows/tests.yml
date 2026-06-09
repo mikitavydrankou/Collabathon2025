@@ -1,0 +1,42 @@
+name: Tests
+
+# Runs the pytest unit suite (shared-lib security/usage + transactions anomaly
+# validation). DB-backed tests use in-memory SQLite, so no services are needed.
+
+on:
+  push:
+    branches: [next-gen, main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install \
+            pytest \
+            numpy \
+            sqlalchemy \
+            python-dotenv \
+            "python-jose[cryptography]" \
+            bcrypt \
+            fastapi \
+            psycopg2-binary
+
+      - name: Run tests
+        env:
+          PYTHONPATH: shared-lib
+          JWT_SECRET: test-secret
+          DATABASE_USERNAME: test
+          DATABASE_PASSWORD: test
+          DATABASE_NAME: test
+        run: pytest
