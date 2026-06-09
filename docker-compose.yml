@@ -18,6 +18,8 @@ x-backend-base: &backend-base
   depends_on:
     db:
       condition: service_healthy
+    migrate:
+      condition: service_completed_successfully
   networks:
     - collabathon-net
 
@@ -57,9 +59,6 @@ services:
     build:
       context: .
       dockerfile: services/auth-svc/Dockerfile
-    environment:
-      <<: *backend-env
-      SEED_ON_START: ${SEED_ON_START}
 
   transactions-svc:
     <<: *backend-base
@@ -69,6 +68,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       kafka:
         condition: service_started
 
@@ -90,6 +91,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       chroma:
         condition: service_started
 
@@ -156,8 +159,12 @@ services:
       CHROMA_HOST: chroma
       CHROMA_PORT: 8000
     depends_on:
-      - kafka
-      - chroma
+      kafka:
+        condition: service_started
+      chroma:
+        condition: service_started
+      migrate:
+        condition: service_completed_successfully
     networks:
       - collabathon-net
 
@@ -171,7 +178,10 @@ services:
     environment:
       KAFKA_BROKERS: kafka:9092
     depends_on:
-      - kafka
+      kafka:
+        condition: service_started
+      migrate:
+        condition: service_completed_successfully
     networks:
       - collabathon-net
 
@@ -187,6 +197,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       kafka:
         condition: service_started
     networks:
@@ -210,6 +222,39 @@ services:
       test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USERNAME} -d ${DATABASE_NAME}"]
       interval: 5s
       retries: 5
+
+  # One-shot: apply schema/migrations once, then exit. App services wait for it
+  # to complete so no replica races on `alembic upgrade`.
+  migrate:
+    build:
+      context: .
+      dockerfile: migrate/Dockerfile
+    restart: "no"
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - collabathon-net
+
+  # One-shot: seed demo data after schema exists (gated by SEED_ON_START).
+  seed:
+    build:
+      context: .
+      dockerfile: seed/Dockerfile
+    restart: "no"
+    env_file:
+      - .env
+    environment:
+      SEED_ON_START: ${SEED_ON_START}
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - collabathon-net
 
   pgweb:
     image: sosedoff/pgweb
