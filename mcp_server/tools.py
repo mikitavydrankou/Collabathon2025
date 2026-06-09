@@ -5,12 +5,15 @@ These tools provide structured data and insights for LLM agents to analyze and m
 All outputs are designed for LLM consumption, not direct UI display.
 """
 
+import logging
 import os
 import sys
 from pathlib import Path
 from datetime import datetime
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
@@ -62,16 +65,14 @@ def get_rag_retriever():
             chroma_path = backend_qa_path / "rag" / "chroma_store"
             
             # Initialize with auto_initialize=True to create embeddings if needed
-            print(f"Initializing RAG retriever from {chroma_path}...")
+            logger.info("Initializing RAG retriever from %s", chroma_path)
             _rag_retriever = TransactionRetriever(
                 chroma_db_path=str(chroma_path),
                 auto_initialize=True  # Will create embeddings if they don't exist
             )
-            print("✅ RAG retriever initialized successfully")
+            logger.info("RAG retriever initialized")
         except Exception as e:
-            print(f"❌ Could not initialize RAG retriever: {e}")
-            import traceback
-            traceback.print_exc()
+            logger.error("Could not initialize RAG retriever: %s", e, exc_info=True)
             _rag_retriever = None
     return _rag_retriever
 
