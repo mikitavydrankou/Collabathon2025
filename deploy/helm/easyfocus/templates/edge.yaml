@@ -39,6 +39,7 @@ spec:
         - path: { type: PathPrefix, value: /validate_amount }
         - path: { type: PathPrefix, value: /validate_bank_number }
         - path: { type: PathPrefix, value: /validate_fullname }
+        - path: { type: PathPrefix, value: /health }
         - path: { type: PathPrefix, value: /status }
         - path: { type: PathPrefix, value: /admin }
       backendRefs:
