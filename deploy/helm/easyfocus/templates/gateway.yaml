@@ -90,6 +90,7 @@ spec:
       containers:
         - name: gateway
           image: nginx:alpine
+          resources: {{ toYaml .Values.gateway.resources | nindent 12 }}
           ports:
             - containerPort: {{ .Values.gateway.port }}
           volumeMounts:

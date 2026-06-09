@@ -19,6 +19,7 @@ spec:
       containers:
         - name: postgres
           image: {{ .Values.infra.postgres.image }}
+          resources: {{ toYaml .Values.infra.postgres.resources | nindent 12 }}
           ports:
             - containerPort: 5432
           env:
@@ -87,6 +88,7 @@ spec:
       containers:
         - name: redis
           image: {{ .Values.infra.redis.image }}
+          resources: {{ toYaml .Values.infra.redis.resources | nindent 12 }}
           ports:
             - containerPort: 6379
 ---
@@ -122,10 +124,12 @@ spec:
       containers:
         - name: kafka
           image: {{ .Values.infra.kafka.image }}
+          resources: {{ toYaml .Values.infra.kafka.resources | nindent 12 }}
           ports:
             - containerPort: 9092
             - containerPort: 9093
           env:
+            - { name: KAFKA_HEAP_OPTS, value: {{ .Values.infra.kafka.heapOpts | quote }} }
             - { name: KAFKA_NODE_ID, value: "1" }
             - { name: KAFKA_PROCESS_ROLES, value: "broker,controller" }
             - { name: KAFKA_CONTROLLER_QUORUM_VOTERS, value: "1@kafka:9093" }
@@ -189,6 +193,7 @@ spec:
       containers:
         - name: chroma
           image: {{ .Values.infra.chroma.image }}
+          resources: {{ toYaml .Values.infra.chroma.resources | nindent 12 }}
           ports:
             - containerPort: 8000
           volumeMounts:

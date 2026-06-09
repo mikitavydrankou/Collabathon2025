@@ -10,6 +10,17 @@ image:
 # resolution. Default kind/k8s service CIDR puts kube-dns at .10.
 clusterDNS: "10.96.0.10"
 
+# Default compute for Python backends/workers. Requests sized for idle (services
+# are light: FastAPI + langchain-openai API client, no local ML). Limits give
+# burst headroom. Override per-workload via `resources` under backends/workers.
+defaultResources:
+  requests:
+    cpu: 25m
+    memory: 96Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
 # Non-secret env, mounted into every backend/worker via envFrom configMap.
 config:
   DB_HOST: postgres
@@ -23,6 +34,9 @@ config:
   CHROMA_HOST: chroma
   CHROMA_PORT: "8000"
   SEED_ON_START: "true"
+  # glibc malloc spawns an arena per thread; uncapped this bloats Python RSS 2-3x.
+  # Mounted into every backend/worker/job via the configMap envFrom.
+  MALLOC_ARENA_MAX: "2"
 
 # Secret env. Override OPENAI_API_KEY (and ideally creds/JWT) in values-local.yaml.
 secret:
@@ -66,23 +80,71 @@ frontend:
   # NOTE: this is baked at BUILD time (NEXT_PUBLIC_*), so it must match the image
   # build-arg; the runtime env below is belt-and-suspenders for SSR only.
   apiUrl: ""
+  # Bounds the V8 old-space so the standalone server.js can't balloon.
+  nodeMaxOldSpaceMB: 192
+  resources:
+    requests:
+      cpu: 25m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
 
 gateway:
   port: 8000
+  resources:
+    requests:
+      cpu: 10m
+      memory: 16Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
 
 # Stateful infra. Pulled from public images, not built.
 infra:
   postgres:
     image: postgres:17
     storage: 1Gi
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 384Mi
   redis:
     image: redis:7-alpine
+    resources:
+      requests:
+        cpu: 10m
+        memory: 16Mi
+      limits:
+        cpu: 100m
+        memory: 64Mi
   kafka:
     image: apache/kafka:3.9.0
     storage: 1Gi
+    # Cap the JVM heap. Without this, JVM ergonomics default MaxHeap to ~25% of
+    # node RAM (GBs on a big node) for a broker that needs far less here.
+    heapOpts: "-Xmx512m -Xms256m"
+    resources:
+      requests:
+        cpu: 100m
+        memory: 640Mi
+      limits:
+        # heap 512m + JVM non-heap (metaspace/threads/direct buffers) headroom.
+        cpu: 1000m
+        memory: 1Gi
   chroma:
     image: chromadb/chroma:latest
     storage: 1Gi
+    resources:
+      requests:
+        cpu: 25m
+        memory: 128Mi
+      limits:
+        cpu: 250m
+        memory: 384Mi
 
 # Gateway API edge (ingress-nginx retired 2026-03-24 → migrated to Gateway API).
 # Single-origin: one host serves UI + API (path-split to frontend / gateway).
