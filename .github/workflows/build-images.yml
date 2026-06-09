@@ -120,16 +120,18 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
 
-      # Scan the freshly-pushed image for known CVEs. Report-only for now
-      # (exit-code 0); flip to "1" to make CRITICAL/HIGH findings fail the build.
+      # Scan the freshly-pushed image for known CVEs. Run Trivy from its own
+      # container (avoids the trivy-action transitive setup-trivy tag breakage).
+      # Report-only for now (--exit-code 0); set it to 1 to fail on CRITICAL/HIGH.
       - name: Trivy scan ${{ matrix.image }}
-        uses: aquasecurity/trivy-action@v0.30.0
         env:
           TRIVY_USERNAME: ${{ github.actor }}
           TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ steps.owner.outputs.name }}/${{ matrix.image }}:${{ github.sha }}
-          format: table
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
-          exit-code: "0"
+        run: |
+          docker run --rm \
+            -e TRIVY_USERNAME -e TRIVY_PASSWORD \
+            aquasec/trivy:0.58.1 image \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --exit-code 0 \
+            "${{ env.REGISTRY }}/${{ steps.owner.outputs.name }}/${{ matrix.image }}:${{ github.sha }}"
