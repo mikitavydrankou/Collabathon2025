@@ -1,0 +1,27 @@
+# MetalLB address pool for the local kind cluster. kind has no cloud
+# LoadBalancer, so the Envoy Gateway's LB Service stays <pending> and the
+# Gateway never reaches Programmed=True — which blocks Argo's health gate.
+# MetalLB hands out IPs from the kind docker network (172.21.0.0/16); this pool
+# carves out the tail, clear of docker's own DHCP range.
+#
+# Install MetalLB itself first (CRDs + controller + speaker), then apply this:
+#   kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml
+#   kubectl -n metallb-system wait --for=condition=Available deploy/controller --timeout=120s
+#   kubectl apply -f deploy/metallb/pool.yaml
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: kind-pool
+  namespace: metallb-system
+spec:
+  addresses:
+    - 172.21.255.200-172.21.255.250
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: kind-l2
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+    - kind-pool

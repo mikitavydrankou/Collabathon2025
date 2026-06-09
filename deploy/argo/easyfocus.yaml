@@ -28,6 +28,24 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: default
+  # The API server / Gateway controller default-fill these fields; the chart omits
+  # them, so Argo would report a permanent OutOfSync. All are immutable or
+  # controller-owned, so ignoring them is safe.
+  ignoreDifferences:
+    - group: apps
+      kind: StatefulSet
+      jqPathExpressions:
+        - .spec.persistentVolumeClaimRetentionPolicy
+        - .spec.volumeClaimTemplates[].apiVersion
+        - .spec.volumeClaimTemplates[].kind
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      jqPathExpressions:
+        - .spec.parentRefs[].group
+        - .spec.parentRefs[].kind
+        - .spec.rules[].backendRefs[].group
+        - .spec.rules[].backendRefs[].kind
+        - .spec.rules[].backendRefs[].weight
   syncPolicy:
     automated:
       prune: true
