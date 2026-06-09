@@ -1,38 +1,19 @@
 FROM python:3.10-slim
 
-WORKDIR /app
+RUN pip install poetry
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy shared package (needed by mcp_server)
-COPY shared-lib/shared /app/shared
-
-# Copy mcp_server pyproject.toml and install dependencies
-COPY mcp_server/pyproject.toml /app/mcp_server/
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir poetry && \
-    cd /app/mcp_server && \
-    poetry config virtualenvs.create false && \
-    poetry config installer.max-workers 10 && \
-    poetry install --no-root --no-interaction --no-ansi || \
-    (echo "Poetry install failed, retrying in 10 seconds..." && sleep 10 && poetry install --no-root --no-interaction --no-ansi)
-
-# Copy mcp_server application code
-COPY mcp_server /app/mcp_server
-
-# Set Python path to include mcp_server and shared
-ENV PYTHONPATH=/app:/app/mcp_server
-
-# Set environment variables
+WORKDIR /app/mcp-svc
+ENV PYTHONPATH=/app/mcp-svc
 ENV PYTHONUNBUFFERED=1
 
-# Expose port 8001 for MCP server
+COPY shared-lib /app/shared-lib
+COPY mcp_server/pyproject.toml ./pyproject.toml
+
+RUN poetry config virtualenvs.create false \
+    && poetry install --no-interaction --no-ansi --no-root
+
+COPY mcp_server ./mcp_server
+
 EXPOSE 8001
 
-# Run the MCP FastAPI server
 CMD ["uvicorn", "mcp_server.app:app", "--host", "0.0.0.0", "--port", "8001"]
-

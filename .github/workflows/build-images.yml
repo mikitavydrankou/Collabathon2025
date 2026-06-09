@@ -45,6 +45,15 @@ jobs:
           - image: collabathon2025-outbox-relay
             context: .
             dockerfile: workers/outbox-relay/Dockerfile
+          - image: collabathon2025-mcp
+            context: .
+            dockerfile: mcp_server/Dockerfile
+          - image: collabathon2025-migrate
+            context: .
+            dockerfile: migrate/Dockerfile
+          - image: collabathon2025-seed
+            context: .
+            dockerfile: seed/Dockerfile
 
     steps:
       - name: Checkout

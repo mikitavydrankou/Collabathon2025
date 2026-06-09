@@ -6,36 +6,20 @@ defined once instead of being duplicated per service.
 
 import logging
 import os
-from pathlib import Path
 from typing import Iterable
 
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
-import shared
-from shared.db import init_db, test_connection
-from shared.seed import seed_database
+from shared.db import test_connection
 
 logger = logging.getLogger(__name__)
-
-
-def run_migrations() -> None:
-    """Apply Alembic migrations to head. Idempotent and safe to run per service."""
-    from alembic import command
-    from alembic.config import Config
-
-    base = Path(shared.__file__).resolve().parent.parent
-    cfg = Config(str(base / "alembic.ini"))
-    cfg.set_main_option("script_location", str(base / "alembic"))
-    command.upgrade(cfg, "head")
 
 
 def create_app(
     title: str,
     routers: Iterable[APIRouter],
-    *,
-    seed_capable: bool = False,
 ) -> FastAPI:
     app = FastAPI(title=title)
 
@@ -53,15 +37,8 @@ def create_app(
 
     Instrumentator().instrument(app).expose(app)
 
-    @app.on_event("startup")
-    def _startup() -> None:
-        try:
-            init_db()
-            run_migrations()
-            if seed_capable and _seed_enabled():
-                seed_database()
-        except Exception:
-            logger.exception("startup database init failed")
+    # Schema + seed are applied out-of-band by the migrate/seed Jobs, never on
+    # service startup — so N replicas don't race on `alembic upgrade`.
 
     @app.get("/")
     def root():
@@ -86,7 +63,3 @@ def create_app(
         return {"status": "ok", "message": "Demo data reset"}
 
     return app
-
-
-def _seed_enabled() -> bool:
-    return os.getenv("SEED_ON_START", "false").lower() in ("1", "true", "yes")

@@ -1,27 +1,17 @@
-[project]
+[tool.poetry]
 name = "mcp-server"
 version = "1.0.0"
-requires-python = ">=3.10"
-dependencies = [
-    "fastapi>=0.104.0",
-    "uvicorn[standard]>=0.24.0",
-    "psycopg2-binary>=2.9.9",
-    "python-dotenv>=1.0.0",
-    "sqlalchemy>=2.0.44,<3.0.0",
-    "pydantic>=2.0.0",
-    "mcp>=1.0.0",
-    "openai (>=2.8.0,<3.0.0)",
-]
+description = "MCP server exposing transaction tools over HTTP/stdio"
+authors = ["Bezketnyky <boss@email.com>"]
+packages = [{ include = "mcp_server", from = "." }]
 
-[tool.poetry]
-packages = [
-    {include = "mcp_server", from = "."},
-]
-
-[tool.poetry.scripts]
-mcp-server = "mcp_server.app:start"
+[tool.poetry.dependencies]
+python = ">=3.10,<4.0"
+shared = { path = "../shared-lib", develop = true }
+mcp = ">=1.0.0"
+uvicorn = { extras = ["standard"], version = ">=0.24.0" }
+openai = ">=2.8.0,<3.0.0"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
-
