@@ -74,3 +74,18 @@ def get_user_balance(user_id: int, db: Session = Depends(get_db)):
         "user_id": int(user.user_id),  # type: ignore
         "balance": float(user.balance),  # type: ignore
     }
+
+
+@router.get("/users")
+def list_users(db: Session = Depends(get_db)):
+    """List accounts available as transfer recipients (demo data)."""
+    users = db.query(User).order_by(User.user_id).all()
+    return [
+        {
+            "user_id": int(u.user_id),  # type: ignore
+            "name": str(u.name),  # type: ignore
+            "surname": str(u.surname),  # type: ignore
+            "bank_number": str(u.bank_number),  # type: ignore
+        }
+        for u in users
+    ]

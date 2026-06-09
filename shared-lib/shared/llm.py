@@ -9,6 +9,10 @@ from typing import Optional
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
+from shared.usage import llm_budget_exceeded
+
+DEMO_LIMIT_MESSAGE = "AI demo limit reached for today. Please try again tomorrow."
+
 # Setup logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -63,6 +67,9 @@ def call_llm(system_prompt: str, user_prompt: str, temperature: float = 0.7, log
     Returns:
         LLM response as string
     """
+    if llm_budget_exceeded():
+        return DEMO_LIMIT_MESSAGE
+
     if log_prompts:
         logger.info(f"\n{'='*80}")
         logger.info(f"[LLM] LLM Call - Temperature: {temperature}")

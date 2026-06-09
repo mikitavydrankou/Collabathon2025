@@ -38,6 +38,7 @@ import QAChatbotScreen from "@/components/qa-chatbot-screen";
 import TransactionDetails from "@/components/transaction-details";
 import TransactionConfirmation from "@/components/transaction-confirmation";
 import NoConnectionPage from "@/components/no-connection-page";
+import SystemStatus from "@/components/system-status";
 
 interface MainDashboardProps {
   userData: any;
@@ -58,6 +59,8 @@ interface Transaction {
   amount_after: number;
   is_sent: boolean;
   transaction_posted: boolean;
+  flagged?: boolean;
+  flag_reason?: string | null;
 }
 
 const portfolioData = [
@@ -82,6 +85,8 @@ export default function MainDashboard({
 }: MainDashboardProps) {
   const [showBalance, setShowBalance] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
+  // Auto-pop hidden popups one-by-one, every 10s while on dashboard.
+  const [popupStep, setPopupStep] = useState(0);
   const [showAIHelper, setShowAIHelper] = useState(false);
   const [showPaymentSuggestion, setShowPaymentSuggestion] = useState(false);
   const [aiHelperInitialStep, setAiHelperInitialStep] = useState<'popup' | 'input' | 'options'>('popup');
@@ -92,6 +97,7 @@ export default function MainDashboard({
     | "qa-chatbot"
     | "transaction-details"
     | "transaction-confirmation"
+    | "system"
   >("dashboard");
   const [supportLevel, setSupportLevel] = useState<"full" | "partial" | "none">(
     "none",
@@ -160,6 +166,21 @@ export default function MainDashboard({
       fetchBalance();
     }
   }, [userData]);
+
+  // Show hidden popups in sequence, one every 10s while user stays on dashboard.
+  useEffect(() => {
+    if (currentPage !== "dashboard") return;
+    const interval = setInterval(() => {
+      setPopupStep((step) => {
+        const next = step + 1;
+        if (next === 1) setShowRepeatPaymentReminder(true);
+        else if (next === 2) setShowPaymentSuggestion(true);
+        else if (next === 3) setShowAIHelper(true);
+        return next > 3 ? step : next;
+      });
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [currentPage]);
 
   const fetchBalance = async () => {
     setLoadingBalance(true);
@@ -323,6 +344,10 @@ export default function MainDashboard({
     );
   }
 
+  if (currentPage === "system") {
+    return <SystemStatus onBack={() => setCurrentPage("dashboard")} />;
+  }
+
   if (currentPage === "chatbot") {
     return (
       <ChatbotScreen
@@ -431,6 +456,21 @@ export default function MainDashboard({
           paddingBottom: "calc(8rem + env(safe-area-inset-bottom, 0px))",
         }}
       >
+        {/* System status entry — prominent */}
+        <button
+          onClick={() => setCurrentPage("system")}
+          className="w-full flex items-center gap-3 p-3 rounded-xl bg-slate-900 text-white shadow-sm hover:bg-slate-800 transition-colors"
+        >
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
+          </span>
+          <span className="text-sm font-medium flex-1 text-left">
+            System status — microservices live
+          </span>
+          <ChevronRightIcon className="w-4 h-4 text-slate-300" />
+        </button>
+
         {/* Greeting & Balance Card */}
         <Card className="bg-gradient-to-br from-white to-slate-50 border-0 shadow-sm">
           <CardContent className="pt-6">
@@ -586,6 +626,14 @@ export default function MainDashboard({
                             {transaction.transaction_text}
                           </p>
                         )}
+                        {transaction.flagged && (
+                          <span
+                            title={transaction.flag_reason || "Flagged by fraud monitoring"}
+                            className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-medium"
+                          >
+                            ⚠ Flagged
+                          </span>
+                        )}
                       </div>
                       <div className="text-right flex-shrink-0">
                         <p
@@ -690,6 +738,14 @@ export default function MainDashboard({
                             <p className="text-xs text-slate-500">
                               {formatDate(transaction.transaction_date)}
                             </p>
+                            {transaction.flagged && (
+                              <span
+                                title={transaction.flag_reason || "Flagged by fraud monitoring"}
+                                className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-medium"
+                              >
+                                ⚠ Flagged
+                              </span>
+                            )}
                           </div>
                         </div>
                         <p
@@ -924,6 +980,30 @@ export default function MainDashboard({
                 </div>
                 <span className="text-slate-900 font-medium text-sm">
                   Help & Support
+                </span>
+              </button>
+
+              <button
+                onClick={() => setCurrentPage("system")}
+                className="w-full flex items-center gap-3 p-3 hover:bg-slate-50 rounded-lg transition-colors text-left group"
+              >
+                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-slate-200 transition-colors">
+                  <svg
+                    className="w-4 h-4 text-slate-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"
+                    />
+                  </svg>
+                </div>
+                <span className="text-slate-900 font-medium text-sm">
+                  System Status
                 </span>
               </button>
             </div>

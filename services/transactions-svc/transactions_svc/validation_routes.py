@@ -59,6 +59,8 @@ def get_user_transactions(user_id: int, limit: int = 10, db: Session = Depends(g
                 "transaction_text": txn.transaction_text,
                 "amount_before": float(txn.amount_before),  # type: ignore
                 "amount_after": float(txn.amount_after),  # type: ignore
+                "flagged": bool(txn.flagged),
+                "flag_reason": txn.flag_reason,
             }
         )
 

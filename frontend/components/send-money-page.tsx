@@ -64,6 +64,16 @@ export default function SendMoneyPage({
   const [recipientName, setRecipientName] = useState("");
   const [amount, setAmount] = useState("");
   const [title, setTitle] = useState("");
+  const [recipients, setRecipients] = useState<
+    { user_id: number; name: string; surname: string; bank_number: string }[]
+  >([]);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/auth/users`)
+      .then((r) => r.json())
+      .then((data) => setRecipients(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, []);
 
   const [isValidating, setIsValidating] = useState(false);
   const [validationError, setValidationError] =
@@ -638,6 +648,37 @@ export default function SendMoneyPage({
                     Step {currentFieldIndex + 1} of {fields.length}
                   </label>
 
+                  {currentField.name === "accountNumber" &&
+                    recipients.length > 0 && (
+                      <div className="mb-4">
+                        <select
+                          value=""
+                          onChange={(e) => {
+                            const r = recipients.find(
+                              (x) => String(x.user_id) === e.target.value,
+                            );
+                            if (!r) return;
+                            setAccountNumber(formatIBAN(r.bank_number));
+                            setRecipientName(`${r.name} ${r.surname}`);
+                            setCurrentFieldIndex(2);
+                          }}
+                          className="w-full px-4 py-3 border-2 border-slate-200 rounded-lg text-base font-medium bg-white focus:outline-none focus:ring-4 focus:ring-blue-100"
+                        >
+                          <option value="">Choose a saved recipient…</option>
+                          {recipients
+                            .filter((r) => r.user_id !== userData?.user_id)
+                            .map((r) => (
+                              <option key={r.user_id} value={r.user_id}>
+                                {r.name} {r.surname} · {r.bank_number}
+                              </option>
+                            ))}
+                        </select>
+                        <p className="text-xs text-slate-400 mt-2 text-center">
+                          or enter details manually below
+                        </p>
+                      </div>
+                    )}
+
                   <div className="relative">
                     <input
                       ref={inputRef}
@@ -883,6 +924,37 @@ export default function SendMoneyPage({
             </CardHeader>
 
             <CardContent className="space-y-6">
+              {recipients.length > 0 && (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-3">
+                    Quick select recipient
+                  </label>
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      const r = recipients.find(
+                        (x) => String(x.user_id) === e.target.value,
+                      );
+                      if (!r) return;
+                      setAccountNumber(formatIBAN(r.bank_number));
+                      setRecipientName(`${r.name} ${r.surname}`);
+                    }}
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-lg text-base font-medium bg-white focus:outline-none focus:ring-4 focus:ring-blue-100"
+                  >
+                    <option value="">Choose a saved recipient…</option>
+                    {recipients
+                      .filter((r) => r.user_id !== userData?.user_id)
+                      .map((r) => (
+                        <option key={r.user_id} value={r.user_id}>
+                          {r.name} {r.surname} · {r.bank_number}
+                        </option>
+                      ))}
+                  </select>
+                  <p className="text-xs text-slate-400 mt-2">
+                    or fill the fields manually below
+                  </p>
+                </div>
+              )}
               {fields.map((field) => {
                 const fieldError =
                   field.name === "accountNumber"

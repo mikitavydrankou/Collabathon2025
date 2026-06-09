@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "outbox-relay"
+version = "0.1.0"
+description = "Relays transactional-outbox rows to Kafka"
+authors = ["Bezketnyky <boss@email.com>"]
+packages = [{ include = "outbox_relay" }]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4.0"
+shared = { path = "../../shared-lib", develop = true }
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

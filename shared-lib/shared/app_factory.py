@@ -6,16 +6,29 @@ defined once instead of being duplicated per service.
 
 import logging
 import os
+from pathlib import Path
 from typing import Iterable
 
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
+import shared
 from shared.db import init_db, test_connection
 from shared.seed import seed_database
 
 logger = logging.getLogger(__name__)
+
+
+def run_migrations() -> None:
+    """Apply Alembic migrations to head. Idempotent and safe to run per service."""
+    from alembic import command
+    from alembic.config import Config
+
+    base = Path(shared.__file__).resolve().parent.parent
+    cfg = Config(str(base / "alembic.ini"))
+    cfg.set_main_option("script_location", str(base / "alembic"))
+    command.upgrade(cfg, "head")
 
 
 def create_app(
@@ -44,6 +57,7 @@ def create_app(
     def _startup() -> None:
         try:
             init_db()
+            run_migrations()
             if seed_capable and _seed_enabled():
                 seed_database()
         except Exception:
@@ -56,6 +70,20 @@ def create_app(
     @app.get("/health")
     def health():
         return {"database": test_connection()}
+
+    @app.get("/usage")
+    def usage():
+        from shared.usage import llm_usage
+
+        return llm_usage()
+
+    @app.post("/admin/reset-db")
+    def reset_db():
+        """Wipe and re-seed demo data. Exposed for the in-app System page."""
+        from shared.seed import reset_database
+
+        reset_database()
+        return {"status": "ok", "message": "Demo data reset"}
 
     return app
 

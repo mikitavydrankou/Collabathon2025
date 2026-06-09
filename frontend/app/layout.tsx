@@ -48,6 +48,25 @@ export default function RootLayout({
         className={`font-sans antialiased`}
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
+        {/* Desktop-only note: this app is designed for mobile screens. */}
+        <aside className="hidden lg:flex fixed left-6 top-1/2 -translate-y-1/2 z-[100] w-56 flex-col gap-2 pointer-events-none">
+          <div className="flex items-center gap-2 text-slate-400">
+            <svg
+              className="w-5 h-5 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <rect x="7" y="2" width="10" height="20" rx="2" strokeWidth={1.8} />
+              <line x1="11" y1="18" x2="13" y2="18" strokeWidth={1.8} strokeLinecap="round" />
+            </svg>
+            <span className="text-sm font-semibold text-slate-500">Built for mobile</span>
+          </div>
+          <p className="text-xs leading-relaxed text-slate-400">
+            This app was designed for mobile devices. For the best experience,
+            open it on a phone or resize your browser to a narrow window.
+          </p>
+        </aside>
         {children}
       </body>
     </html>

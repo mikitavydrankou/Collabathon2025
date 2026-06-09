@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 from decimal import Decimal
 from typing import Optional
@@ -5,7 +6,8 @@ from typing import Optional
 from sqlalchemy import and_, desc, or_
 from sqlalchemy.orm import Session
 
-from shared.models import Transaction, User
+from shared.messaging import TRANSACTIONS_TOPIC
+from shared.models import OutboxEvent, Transaction, User
 from .schemas import (
     CreateTransactionRequest,
     TransactionFilter,
@@ -90,8 +92,27 @@ class TransactionService:
             # Update receiver balance
             receiver.balance += amount
 
-            # Save to database
+            # Save transaction + outbox event atomically (transactional outbox).
+            # Both rows commit together, so the event can never be lost even if
+            # the process crashes right after the transfer — a relay publishes it.
             db.add(transaction)
+            db.flush()  # assign transaction_id without committing yet
+
+            event = {
+                "transaction_id": int(transaction.transaction_id),
+                "amount": float(transaction.amount),
+                "recipient_name": f"{transaction.receiver_name} {transaction.receiver_surname}",
+                "transaction_text": str(transaction.transaction_text or ""),
+                "date": transaction.transaction_date_and_time.isoformat(),
+            }
+            db.add(
+                OutboxEvent(
+                    topic=TRANSACTIONS_TOPIC,
+                    key=str(transaction.transaction_id),
+                    payload=json.dumps(event),
+                )
+            )
+
             db.commit()
             db.refresh(transaction)
 
@@ -188,6 +209,8 @@ class TransactionService:
                 "amount_after": float(transaction.amount_after),
                 "is_sent": is_sent,
                 "transaction_posted": transaction.transaction_posted,
+                "flagged": bool(transaction.flagged),
+                "flag_reason": transaction.flag_reason,
             }
             transactions.append(transaction_dict)
 

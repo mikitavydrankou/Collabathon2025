@@ -1,8 +1,36 @@
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 
-from shared.models import PersonToContact, SessionLocal, Transaction, User
+from shared.models import (
+    OutboxEvent,
+    PersonToContact,
+    SessionLocal,
+    Transaction,
+    User,
+)
 from shared.security import get_password_hash
+
+
+def reset_database():
+    """Wipe all demo rows and re-seed from scratch.
+
+    Used by the in-app System status "Reset demo data" action. Deletes in
+    FK-safe order (transactions → users → contacts), then runs the seeder.
+    """
+    db = SessionLocal()
+    try:
+        db.query(OutboxEvent).delete()
+        db.query(Transaction).delete()
+        db.query(User).delete()
+        db.query(PersonToContact).delete()
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+    seed_database()
 
 
 def seed_database():

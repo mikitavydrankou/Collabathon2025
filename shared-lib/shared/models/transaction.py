@@ -19,6 +19,8 @@ class Transaction(Base):
     transaction_type = Column(String(50), nullable=False)
     transaction_posted = Column(Boolean, nullable=False, default=False)
     transaction_text = Column(String(500), nullable=True)
+    flagged = Column(Boolean, nullable=False, default=False)
+    flag_reason = Column(String(200), nullable=True)
 
     # Relationships
     sender = relationship("User", foreign_keys=[sender_id], backref="sent_transactions")

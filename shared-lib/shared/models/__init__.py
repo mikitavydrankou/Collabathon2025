@@ -13,7 +13,7 @@ load_dotenv()
 
 DATABASE_URL = f"postgresql://{os.getenv('DATABASE_USERNAME')}:{os.getenv('DATABASE_PASSWORD')}@{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '5432')}/{os.getenv('DATABASE_NAME')}"
 
-engine = create_engine(DATABASE_URL, echo=False)
+engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
@@ -21,5 +21,14 @@ Base = declarative_base()
 from .person_to_contact import PersonToContact
 from .transaction import Transaction
 from .user import User
+from .outbox import OutboxEvent
 
-__all__ = ["Base", "engine", "SessionLocal", "User", "PersonToContact", "Transaction"]
+__all__ = [
+    "Base",
+    "engine",
+    "SessionLocal",
+    "User",
+    "PersonToContact",
+    "Transaction",
+    "OutboxEvent",
+]
