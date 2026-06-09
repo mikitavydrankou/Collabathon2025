@@ -90,7 +90,8 @@ spec:
               cpu: 10m
               memory: 32Mi
             limits:
-              cpu: 100m
+              # 200m (was 100m) — exporter throttled ~27% at 100m under scrape load
+              cpu: 200m
               memory: 64Mi
 ---
 apiVersion: v1

@@ -6,6 +6,7 @@ data:
 {{- range $k, $v := .Values.config }}
   {{ $k }}: {{ $v | quote }}
 {{- end }}
+{{- if .Values.createSecret }}
 ---
 apiVersion: v1
 kind: Secret
@@ -15,4 +16,5 @@ type: Opaque
 stringData:
 {{- range $k, $v := .Values.secret }}
   {{ $k }}: {{ $v | quote }}
+{{- end }}
 {{- end }}

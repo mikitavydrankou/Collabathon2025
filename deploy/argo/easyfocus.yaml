@@ -1,0 +1,37 @@
+# EasyFocus app under Argo GitOps. Renders the in-repo Helm chart
+# (deploy/helm/easyfocus) straight from git — no more manual `helm upgrade`.
+#
+# createSecret=false: values-local.yaml (the real creds) is gitignored, so Argo
+# can't see it. Without this flag the chart would render easyfocus-secret from
+# the placeholder values in values.yaml and clobber the live secret. Manage
+# easyfocus-secret out-of-band (kubectl), same pattern as alertmanager-telegram.
+#
+# Repo is public, so it's pulled over https with no credentials.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: easyfocus
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/mikitavydrankou/Collabathon2025.git
+    targetRevision: next-gen
+    path: deploy/helm/easyfocus
+    helm:
+      # Chart values.yaml is auto-loaded; override only what GitOps needs.
+      parameters:
+        - name: createSecret
+          value: "false"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

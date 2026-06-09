@@ -38,6 +38,13 @@ config:
   # Mounted into every backend/worker/job via the configMap envFrom.
   MALLOC_ARENA_MAX: "2"
 
+# Render the easyfocus-secret from `.secret` below. true for helm/bootstrap
+# (creds come from gitignored values-local.yaml). Set false under Argo GitOps:
+# Argo syncs from git where values-local.yaml is absent, so it would otherwise
+# overwrite the live secret with the placeholders here. Manage easyfocus-secret
+# out-of-band in that mode (same as alertmanager-telegram).
+createSecret: true
+
 # Secret env. Override OPENAI_API_KEY (and ideally creds/JWT) in values-local.yaml.
 secret:
   DATABASE_USERNAME: your_username
