@@ -1,0 +1,101 @@
+# Default values for the EasyFocus chart.
+# Secrets (OPENAI_API_KEY etc.) live in values-local.yaml — NOT committed.
+
+image:
+  registry: ghcr.io/mikitavydrankou
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# CoreDNS ClusterIP — used by the gateway nginx resolver for runtime upstream
+# resolution. Default kind/k8s service CIDR puts kube-dns at .10.
+clusterDNS: "10.96.0.10"
+
+# Non-secret env, mounted into every backend/worker via envFrom configMap.
+config:
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DATABASE_NAME: your_database_name
+  MCP_SERVER_URL: http://mcp:8001
+  KAFKA_BROKERS: kafka:9092
+  REDIS_URL: redis://redis:6379/0
+  CORS_ORIGINS: "*"
+  OPENAI_DAILY_LIMIT: "50"
+  CHROMA_HOST: chroma
+  CHROMA_PORT: "8000"
+  SEED_ON_START: "true"
+
+# Secret env. Override OPENAI_API_KEY (and ideally creds/JWT) in values-local.yaml.
+secret:
+  DATABASE_USERNAME: your_username
+  DATABASE_PASSWORD: your_password
+  JWT_SECRET: change_me_use_a_long_random_string
+  OPENAI_API_KEY: ""
+
+# HTTP backend services (built images, listen on :8000 unless noted).
+backends:
+  auth-svc:
+    image: collabathon2025-auth-svc
+    port: 8000
+  transactions-svc:
+    image: collabathon2025-transactions-svc
+    port: 8000
+  chatbot-svc:
+    image: collabathon2025-chatbot-svc
+    port: 8000
+  qa-svc:
+    image: collabathon2025-qa-svc
+    port: 8000
+  mcp:
+    image: collabathon2025-mcp
+    port: 8001
+    probe: false   # no /health endpoint confirmed
+
+# Kafka consumers / outbox relay — no service, no HTTP port.
+workers:
+  embedding-worker:
+    image: collabathon2025-embedding-worker
+  anomaly-worker:
+    image: collabathon2025-anomaly-worker
+  outbox-relay:
+    image: collabathon2025-outbox-relay
+
+frontend:
+  image: collabathon2025-frontend
+  port: 3000
+  # Same-origin: empty = relative URLs, edge routes /auth, /qa, ... to gateway.
+  # NOTE: this is baked at BUILD time (NEXT_PUBLIC_*), so it must match the image
+  # build-arg; the runtime env below is belt-and-suspenders for SSR only.
+  apiUrl: ""
+
+gateway:
+  port: 8000
+
+# Stateful infra. Pulled from public images, not built.
+infra:
+  postgres:
+    image: postgres:17
+    storage: 1Gi
+  redis:
+    image: redis:7-alpine
+  kafka:
+    image: apache/kafka:3.9.0
+    storage: 1Gi
+  chroma:
+    image: chromadb/chroma:latest
+    storage: 1Gi
+
+# Gateway API edge (ingress-nginx retired 2026-03-24 → migrated to Gateway API).
+# Single-origin: one host serves UI + API (path-split to frontend / gateway).
+# className is the only thing that changes kind → GKE; HTTPRoute stays identical.
+edge:
+  enabled: true
+  className: eg            # Envoy Gateway. On GKE swap to gke-l7-* if going native.
+  host: easyfocus.local
+  # Extra accepted Host headers. `localhost` lets the browser hit the kind
+  # port-forward at http://localhost:<port> with no hosts-file edit.
+  extraHostnames:
+    - localhost
+
+# kafka-ui / pgweb — off by default.
+devtools:
+  enabled: false

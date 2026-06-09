@@ -1,0 +1,61 @@
+{{- range $name, $svc := .Values.backends }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    app: {{ $name }}
+spec:
+  replicas: {{ $svc.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $name }}
+    spec:
+      initContainers:
+        - name: wait-db
+          image: busybox:1.36
+          command: ["sh", "-c", "until nc -z {{ $.Values.config.DB_HOST }} {{ $.Values.config.DB_PORT }}; do echo waiting-for-db; sleep 2; done"]
+      containers:
+        - name: {{ $name }}
+          image: {{ $.Values.image.registry }}/{{ $svc.image }}:{{ $.Values.image.tag }}
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ $svc.port }}
+          envFrom:
+            - configMapRef:
+                name: easyfocus-config
+            - secretRef:
+                name: easyfocus-secret
+          {{- if ne $svc.probe false }}
+          readinessProbe:
+            httpGet:
+              path: {{ $svc.healthPath | default "/health" }}
+              port: {{ $svc.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: {{ $svc.healthPath | default "/health" }}
+              port: {{ $svc.port }}
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    app: {{ $name }}
+spec:
+  selector:
+    app: {{ $name }}
+  ports:
+    - port: {{ $svc.port }}
+      targetPort: {{ $svc.port }}
+{{- end }}

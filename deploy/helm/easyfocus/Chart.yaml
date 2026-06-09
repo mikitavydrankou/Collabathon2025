@@ -1,0 +1,6 @@
+apiVersion: v2
+name: easyfocus
+description: EasyFocus microservices stack (4 services + gateway + frontend + mcp + workers + Kafka/Postgres/Redis/Chroma)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

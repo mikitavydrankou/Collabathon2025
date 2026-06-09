@@ -1,0 +1,59 @@
+# migrate (alembic upgrade) then seed. Plain Jobs — under `helm --wait` Helm
+# blocks until both complete. initContainers gate on Postgres TCP; the seed Job
+# relies on backoffLimit retries to wait out migrate creating the tables.
+# sync-wave annotations are for later Argo CD GitOps (ignored by Helm).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate
+  annotations:
+    "argocd.argoproj.io/sync-wave": "-1"
+spec:
+  ttlSecondsAfterFinished: 600
+  backoffLimit: 6
+  template:
+    metadata:
+      name: migrate
+    spec:
+      restartPolicy: Never
+      initContainers:
+        - name: wait-db
+          image: busybox:1.36
+          command: ["sh", "-c", "until nc -z {{ .Values.config.DB_HOST }} {{ .Values.config.DB_PORT }}; do echo waiting-for-db; sleep 2; done"]
+      containers:
+        - name: migrate
+          image: {{ .Values.image.registry }}/collabathon2025-migrate:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: easyfocus-config
+            - secretRef:
+                name: easyfocus-secret
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: seed
+  annotations:
+    "argocd.argoproj.io/sync-wave": "1"
+spec:
+  ttlSecondsAfterFinished: 600
+  backoffLimit: 6
+  template:
+    metadata:
+      name: seed
+    spec:
+      restartPolicy: Never
+      initContainers:
+        - name: wait-db
+          image: busybox:1.36
+          command: ["sh", "-c", "until nc -z {{ .Values.config.DB_HOST }} {{ .Values.config.DB_PORT }}; do echo waiting-for-db; sleep 2; done"]
+      containers:
+        - name: seed
+          image: {{ .Values.image.registry }}/collabathon2025-seed:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: easyfocus-config
+            - secretRef:
+                name: easyfocus-secret

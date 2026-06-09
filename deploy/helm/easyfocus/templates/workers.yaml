@@ -1,0 +1,32 @@
+{{- range $name, $w := .Values.workers }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    app: {{ $name }}
+spec:
+  replicas: {{ $w.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $name }}
+    spec:
+      initContainers:
+        - name: wait-kafka
+          image: busybox:1.36
+          command: ["sh", "-c", "until nc -z kafka 9092; do echo waiting-for-kafka; sleep 2; done"]
+      containers:
+        - name: {{ $name }}
+          image: {{ $.Values.image.registry }}/{{ $w.image }}:{{ $.Values.image.tag }}
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: easyfocus-config
+            - secretRef:
+                name: easyfocus-secret
+{{- end }}

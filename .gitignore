@@ -29,3 +29,4 @@ htmlcov/
 poetry.lock
 .DS_Store
 *.log
+deploy/helm/easyfocus/values-local.yaml
