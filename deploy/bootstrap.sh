@@ -27,10 +27,12 @@ spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 EOF
 
-echo "==> helm install"
+IMAGE_TAG=$(git rev-parse HEAD 2>/dev/null || echo "latest")
+echo "==> helm upgrade --install (image tag: $IMAGE_TAG)"
 helm upgrade --install easyfocus "$CHART" \
   -f "$CHART/values.yaml" \
   -f "$CHART/values-local.yaml" \
+  --set image.tag="$IMAGE_TAG" \
   --wait --timeout 10m
 
 echo
