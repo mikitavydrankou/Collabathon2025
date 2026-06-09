@@ -174,3 +174,10 @@ monitoring:
   exporters: true
   # Cosmetic label only; Prometheus picks ServiceMonitors via empty selector.
   releaseLabel: kube-prometheus-stack
+  # Custom Grafana dashboard ConfigMap (templates/grafana-dashboard.yaml).
+  dashboard: true
+  # Loki datasource ConfigMap for Grafana (templates/grafana-datasource-loki.yaml).
+  # Requires the Loki Argo app (deploy/argo/loki.yaml) running in ns monitoring.
+  loki: true
+  # PrometheusRule alerts (templates/prometheus-rules.yaml).
+  alerts: true

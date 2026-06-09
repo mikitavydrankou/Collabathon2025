@@ -1,0 +1,51 @@
+{{- if .Values.monitoring.alerts }}
+# Alerting rules for EasyFocus. PrometheusRule CRD — picked up by the Prometheus
+# Operator (ruleSelector: {} in deploy/argo/kube-prometheus-stack.yaml, all ns).
+# Routing to Telegram is configured on the Alertmanager side (see that file).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: easyfocus-alerts
+  labels:
+    app: easyfocus
+    release: {{ .Values.monitoring.releaseLabel }}
+spec:
+  groups:
+    - name: easyfocus.rules
+      rules:
+        # >5% of a service's requests are 5xx over 5m.
+        - alert: HighErrorRate
+          expr: |
+            sum(rate(http_requests_total{status=~"5.."}[5m])) by (job)
+              / clamp_min(sum(rate(http_requests_total[5m])) by (job), 0.001)
+              > 0.05
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High 5xx error rate on {{`{{ $labels.job }}`}}"
+            description: "{{`{{ $labels.job }}`}} is serving {{`{{ $value | humanizePercentage }}`}} 5xx responses (>5%) for 5m."
+
+        # A Kafka consumer group is falling behind (lag > 1000 for 5m).
+        - alert: KafkaConsumerLag
+          expr: sum(kafka_consumergroup_lag) by (consumergroup) > 1000
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Kafka consumer lag on {{`{{ $labels.consumergroup }}`}}"
+            description: "Group {{`{{ $labels.consumergroup }}`}} lag is {{`{{ $value }}`}} (>1000) for 5m."
+
+        # A pod is stuck in CrashLoopBackOff.
+        - alert: PodCrashLooping
+          expr: |
+            max by (namespace, pod, container) (
+              kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff"}
+            ) == 1
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Pod {{`{{ $labels.namespace }}`}}/{{`{{ $labels.pod }}`}} crash-looping"
+            description: "Container {{`{{ $labels.container }}`}} in {{`{{ $labels.pod }}`}} is CrashLoopBackOff for 5m."
+{{- end }}

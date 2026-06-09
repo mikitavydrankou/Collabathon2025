@@ -1,0 +1,23 @@
+{{- if .Values.monitoring.loki }}
+# Loki datasource for Grafana. Picked up by the Grafana datasource sidecar
+# (kube-prometheus-stack) via the `grafana_datasource` label; the sidecar watches
+# ALL namespaces, so this lives in the app namespace (default). The uid `loki`
+# matches the datasource referenced by the Logs panel in the dashboard JSON.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: easyfocus-loki-datasource
+  labels:
+    grafana_datasource: "1"
+data:
+  loki-datasource.yaml: |-
+    apiVersion: 1
+    datasources:
+      - name: Loki
+        type: loki
+        uid: loki
+        access: proxy
+        url: http://loki.monitoring.svc.cluster.local:3100
+        isDefault: false
+        editable: false
+{{- end }}

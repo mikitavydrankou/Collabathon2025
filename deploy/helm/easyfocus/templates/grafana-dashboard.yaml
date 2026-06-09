@@ -1,0 +1,16 @@
+{{- if .Values.monitoring.dashboard }}
+# Custom EasyFocus overview dashboard. Picked up by the Grafana dashboard sidecar
+# (kube-prometheus-stack) via the `grafana_dashboard` label. The sidecar watches
+# ALL namespaces (see deploy/argo/kube-prometheus-stack.yaml), so this ConfigMap
+# lives in the app's namespace (default). JSON is loaded from a file via
+# .Files.Get so Helm never tries to interpret Grafana's legend brace syntax.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: easyfocus-dashboard
+  labels:
+    grafana_dashboard: "1"
+data:
+  easyfocus.json: |-
+{{ .Files.Get "dashboards/easyfocus.json" | indent 4 }}
+{{- end }}
