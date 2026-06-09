@@ -54,9 +54,11 @@ spec:
           resources:
             requests:
               cpu: 50m
-              memory: 128Mi
-            limits:
               memory: 256Mi
+            limits:
+              # 256Mi OOMKilled once the Tempo datasource + trace search (bleve)
+              # were added alongside Prometheus/Loki. 512Mi holds the 3 datasources.
+              memory: 512Mi
         alertmanager:
           alertmanagerSpec:
             # Mounts Secret `alertmanager-telegram` (key `token`) at

@@ -40,6 +40,9 @@ config:
   # OTLP/gRPC endpoint for traces. Empty disables tracing (shared.tracing is a
   # no-op). Points at the Tempo Argo app (deploy/argo/tempo.yaml) in ns monitoring.
   OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo.monitoring.svc.cluster.local:4317
+  # Drop liveness/readiness + metrics scrape spans so traces show real traffic,
+  # not kubelet/Prometheus probe noise (matched as substrings of the path).
+  OTEL_PYTHON_FASTAPI_EXCLUDED_URLS: "health,metrics,usage"
 
 # Render the easyfocus-secret from `.secret` below. true for a local helm
 # render (creds come from gitignored values-local.yaml). Set false under Argo:

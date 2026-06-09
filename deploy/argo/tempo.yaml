@@ -34,9 +34,11 @@ spec:
           resources:
             requests:
               cpu: 50m
-              memory: 128Mi
+              memory: 256Mi
             limits:
-              memory: 512Mi
+              # 512Mi restarted (503) under trace ingest + search; 1Gi is stable
+              # for a single-binary demo Tempo.
+              memory: 1Gi
         persistence:
           enabled: true
           size: 5Gi
