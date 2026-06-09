@@ -4,11 +4,14 @@ import json
 import logging
 import os
 import time
-from typing import Callable
+from typing import Callable, Optional
 
 from confluent_kafka import Consumer, Producer
+from opentelemetry import propagate, trace
+from opentelemetry.trace import SpanKind
 
 logger = logging.getLogger(__name__)
+tracer = trace.get_tracer("shared.messaging")
 
 TRANSACTIONS_TOPIC = "transactions.created"
 
@@ -27,6 +30,20 @@ def get_producer() -> Producer:
 def publish(producer: Producer, topic: str, key: str, value: dict) -> None:
     producer.produce(topic, key=key, value=json.dumps(value).encode("utf-8"))
     producer.flush()
+
+
+def _headers_to_carrier(headers) -> dict:
+    """Turn confluent-kafka message headers into a W3C propagation carrier."""
+    carrier: dict = {}
+    for k, v in headers or []:
+        if v is not None:
+            carrier[k] = v.decode("utf-8") if isinstance(v, (bytes, bytearray)) else v
+    return carrier
+
+
+def carrier_to_headers(carrier: Optional[dict]) -> list:
+    """Turn a propagation carrier into confluent-kafka produce headers."""
+    return [(k, str(v).encode("utf-8")) for k, v in (carrier or {}).items()]
 
 
 def _send_to_dlq(producer: Producer, dlq_topic: str, raw_value: bytes, error: str) -> None:
@@ -69,10 +86,19 @@ def consume(topic: str, group_id: str, handler: Callable[[dict], None]) -> None:
                 logger.error("consume error: %s", msg.error())
                 continue
 
+            # Re-attach the trace context the relay injected into headers so
+            # this worker's span links back to the originating transfer.
+            parent_ctx = propagate.extract(_headers_to_carrier(msg.headers()))
+
             last_error = None
             for attempt in range(1, HANDLER_MAX_ATTEMPTS + 1):
                 try:
-                    handler(json.loads(msg.value()))
+                    with tracer.start_as_current_span(
+                        f"consume {topic}",
+                        context=parent_ctx,
+                        kind=SpanKind.CONSUMER,
+                    ):
+                        handler(json.loads(msg.value()))
                     last_error = None
                     break
                 except Exception as exc:

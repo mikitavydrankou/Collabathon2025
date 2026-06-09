@@ -156,6 +156,23 @@
           "expr": "{namespace=\"default\"} |= ``"
         }
       ]
+    },
+    {
+      "title": "Recent traces (Tempo)",
+      "type": "table",
+      "datasource": { "type": "tempo", "uid": "tempo" },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 38 },
+      "description": "End-to-end transfer traces: transactions-svc -> outbox relay -> Kafka -> embedding/anomaly workers. Click a trace to expand spans.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "tempo", "uid": "tempo" },
+          "queryType": "traceqlSearch",
+          "query": "{}",
+          "limit": 20,
+          "tableType": "traces"
+        }
+      ]
     }
   ]
 }

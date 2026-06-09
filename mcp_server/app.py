@@ -8,6 +8,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from shared.models import engine
+from shared.tracing import init_tracing
 
 from . import __version__
 from .schemas import (
@@ -35,6 +36,17 @@ app = FastAPI(
     description="MCP tools for LLM-driven money transfer assistance",
     version=__version__,
 )
+
+# This service builds its own FastAPI (not shared.app_factory), so tracing is
+# wired up here: a no-op without OTEL_EXPORTER_OTLP_ENDPOINT, otherwise mcp
+# server spans continue the trace the caller (chatbot/qa) propagated over httpx.
+init_tracing("mcp")
+try:
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+    FastAPIInstrumentor.instrument_app(app)
+except Exception:  # never let instrumentation break startup
+    pass
 
 # CORS middleware for backend communication
 app.add_middleware(

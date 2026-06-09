@@ -17,6 +17,12 @@ prometheus-fastapi-instrumentator = ">=7.0.0"
 confluent-kafka = ">=2.3.0"
 redis = ">=5.0.0"
 alembic = ">=1.13.0"
+opentelemetry-sdk = ">=1.27.0"
+opentelemetry-exporter-otlp-proto-grpc = ">=1.27.0"
+opentelemetry-instrumentation-fastapi = ">=0.48b0"
+opentelemetry-instrumentation-sqlalchemy = ">=0.48b0"
+opentelemetry-instrumentation-requests = ">=0.48b0"
+opentelemetry-instrumentation-httpx = ">=0.48b0"
 langchain-core = { version = ">=0.1.0", optional = true }
 langchain-openai = { version = ">=0.0.5", optional = true }
 

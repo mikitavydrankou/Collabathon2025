@@ -110,7 +110,7 @@ kubectl apply -f "$HERE/argo/"
 
 # --- 7. wait + access hints ---
 echo "==> waiting for apps to sync (Argo polls git ~every 3m on first run)"
-for app in kube-prometheus-stack loki promtail easyfocus; do
+for app in kube-prometheus-stack loki promtail tempo easyfocus; do
   echo "  - $app"
   kubectl -n argocd wait --for=jsonpath='{.status.health.status}'=Healthy \
     "application/$app" --timeout=600s || echo "    (still progressing — check Argo UI)"

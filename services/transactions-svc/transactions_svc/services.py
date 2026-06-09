@@ -105,6 +105,16 @@ class TransactionService:
                 "transaction_text": str(transaction.transaction_text or ""),
                 "date": transaction.transaction_date_and_time.isoformat(),
             }
+
+            # Capture the current trace context into the event so the relay can
+            # re-attach it when publishing to Kafka, keeping the transfer in one
+            # end-to-end trace across the async outbox boundary.
+            from opentelemetry import propagate
+
+            carrier: dict = {}
+            propagate.inject(carrier)
+            if carrier:
+                event["_otel"] = carrier
             db.add(
                 OutboxEvent(
                     topic=TRANSACTIONS_TOPIC,

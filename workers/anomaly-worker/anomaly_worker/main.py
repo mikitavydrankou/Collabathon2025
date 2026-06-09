@@ -3,6 +3,7 @@ import os
 
 from shared.messaging import TRANSACTIONS_TOPIC, consume
 from shared.models import SessionLocal, Transaction
+from shared.tracing import init_tracing
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("anomaly_worker")
@@ -38,6 +39,7 @@ def handle(event: dict) -> None:
 
 
 def main() -> None:
+    init_tracing("anomaly-worker")
     consume(TRANSACTIONS_TOPIC, "anomaly", handle)
 
 

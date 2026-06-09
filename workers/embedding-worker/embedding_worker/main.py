@@ -5,6 +5,7 @@ import chromadb
 from openai import OpenAI
 
 from shared.messaging import TRANSACTIONS_TOPIC, consume
+from shared.tracing import init_tracing
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("embedding_worker")
@@ -41,6 +42,7 @@ def handle(event: dict) -> None:
 
 
 def main() -> None:
+    init_tracing("embedding-worker")
     consume(TRANSACTIONS_TOPIC, "embeddings", handle)
 
 

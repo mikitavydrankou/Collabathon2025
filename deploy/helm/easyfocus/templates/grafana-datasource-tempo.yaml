@@ -1,0 +1,42 @@
+{{- if .Values.monitoring.tempo }}
+# Tempo datasource for Grafana. Picked up by the Grafana datasource sidecar
+# (kube-prometheus-stack) via the `grafana_datasource` label; the sidecar watches
+# ALL namespaces, so this lives in the app namespace (default). The uid `tempo`
+# matches the datasource referenced by the Traces panel in the dashboard JSON.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: easyfocus-tempo-datasource
+  labels:
+    grafana_datasource: "1"
+data:
+  tempo-datasource.yaml: |-
+    apiVersion: 1
+    datasources:
+      - name: Tempo
+        type: tempo
+        uid: tempo
+        access: proxy
+        url: http://tempo.monitoring.svc.cluster.local:3100
+        isDefault: false
+        editable: false
+        jsonData:
+          # Jump from a span to the emitting service's logs in Loki, correlated
+          # by the service.name resource attribute.
+          tracesToLogsV2:
+            datasourceUid: loki
+            spanStartTimeShift: -1h
+            spanEndTimeShift: 1h
+            filterByTraceID: true
+            filterBySpanID: false
+            tags:
+              - key: service.name
+                value: service_name
+          # Link RED metrics for a span's service back to Prometheus.
+          tracesToMetrics:
+            datasourceUid: prometheus
+            spanStartTimeShift: -1h
+            spanEndTimeShift: 1h
+          nodeGraph:
+            enabled: true
+{{- end }}

@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from shared.db import test_connection
+from shared.tracing import init_tracing
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,8 @@ def create_app(
     routers: Iterable[APIRouter],
 ) -> FastAPI:
     app = FastAPI(title=title)
+
+    init_tracing(title)
 
     origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()]
     app.add_middleware(
@@ -36,6 +39,15 @@ def create_app(
         app.include_router(router)
 
     Instrumentator().instrument(app).expose(app)
+
+    # FastAPI request spans (root of every trace). Guarded so a missing OTel
+    # install or disabled tracing never breaks app startup.
+    try:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+        FastAPIInstrumentor.instrument_app(app)
+    except Exception:
+        logger.exception("fastapi instrumentation failed")
 
     # Schema + seed are applied out-of-band by the migrate/seed Jobs, never on
     # service startup — so N replicas don't race on `alembic upgrade`.

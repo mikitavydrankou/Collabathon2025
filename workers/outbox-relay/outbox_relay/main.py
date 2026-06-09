@@ -11,13 +11,17 @@ import logging
 import os
 import time
 
+from opentelemetry import propagate, trace
+from opentelemetry.trace import SpanKind
 from sqlalchemy import inspect
 
-from shared.messaging import get_producer
+from shared.messaging import carrier_to_headers, get_producer
 from shared.models import OutboxEvent, SessionLocal, engine
+from shared.tracing import init_tracing
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("outbox_relay")
+tracer = trace.get_tracer("outbox_relay")
 
 BATCH_SIZE = int(os.getenv("OUTBOX_BATCH_SIZE", "100"))
 POLL_INTERVAL = float(os.getenv("OUTBOX_POLL_INTERVAL", "1.0"))
@@ -43,6 +47,41 @@ def _wait_for_table(timeout: float = 60.0) -> None:
         time.sleep(2.0)
 
 
+def _produce_row(producer, row) -> None:
+    """Publish one outbox row, re-attaching the producer's trace context.
+
+    The originating transfer stashed its trace context under ``_otel`` in the
+    payload. We pop it, open a producer span as a child of that context, then
+    inject the span into Kafka headers so the consumer continues the same
+    trace. The header payload is stripped of ``_otel`` so consumers see a clean
+    event body.
+    """
+    payload = row.payload
+    parent_ctx = None
+    headers = None
+    try:
+        body = json.loads(payload)
+    except (ValueError, TypeError):
+        body = None
+
+    if isinstance(body, dict) and "_otel" in body:
+        parent_ctx = propagate.extract(body.pop("_otel"))
+        payload = json.dumps(body)
+
+    with tracer.start_as_current_span(
+        f"publish {row.topic}", context=parent_ctx, kind=SpanKind.PRODUCER
+    ):
+        carrier: dict = {}
+        propagate.inject(carrier)
+        headers = carrier_to_headers(carrier)
+        producer.produce(
+            row.topic,
+            key=(row.key.encode("utf-8") if row.key else None),
+            value=payload.encode("utf-8"),
+            headers=headers,
+        )
+
+
 def _relay_once(producer) -> int:
     """Publish one batch of unsent outbox rows. Returns count delivered."""
     db = SessionLocal()
@@ -58,11 +97,7 @@ def _relay_once(producer) -> int:
             return 0
 
         for row in rows:
-            producer.produce(
-                row.topic,
-                key=(row.key.encode("utf-8") if row.key else None),
-                value=row.payload.encode("utf-8"),
-            )
+            _produce_row(producer, row)
         producer.flush()  # one flush per batch, not per message
 
         from datetime import datetime
@@ -82,6 +117,7 @@ def _relay_once(producer) -> int:
 
 
 def main() -> None:
+    init_tracing("outbox-relay")
     _wait_for_table()
     producer = get_producer()
     logger.info("outbox relay started (batch=%d, interval=%.1fs)", BATCH_SIZE, POLL_INTERVAL)
