@@ -1,7 +1,10 @@
 name: Build & push images
 
-# Builds every service/worker image and pushes to GitHub Container Registry
-# (ghcr.io). Auth uses the built-in GITHUB_TOKEN — no extra secrets needed.
+# Builds service/worker images and pushes to GitHub Container Registry (ghcr.io).
+# Only images whose code changed are rebuilt. shared-lib/ feeds every backend
+# image, so a change there rebuilds all of them; a frontend-only change rebuilds
+# just the frontend. A change to this workflow (or a manual run) rebuilds all.
+# Auth uses the built-in GITHUB_TOKEN — no extra secrets needed.
 
 on:
   push:
@@ -12,7 +15,71 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
+  # ---- decide which images to (re)build ----
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      images: ${{ steps.set.outputs.images }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            shared: ['shared-lib/**']
+            ci: ['.github/workflows/build-images.yml']
+            frontend: ['frontend/**']
+            auth-svc: ['services/auth-svc/**']
+            transactions-svc: ['services/transactions-svc/**']
+            chatbot-svc: ['services/chatbot-svc/**']
+            qa-svc: ['services/qa-svc/**']
+            embedding-worker: ['workers/embedding-worker/**']
+            anomaly-worker: ['workers/anomaly-worker/**']
+            outbox-relay: ['workers/outbox-relay/**']
+            mcp: ['mcp_server/**']
+            migrate: ['migrate/**']
+            seed: ['seed/**']
+
+      - name: Build matrix of changed images
+        id: set
+        env:
+          FILTERS: ${{ toJSON(steps.filter.outputs) }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          # name = image filter key, shared = depends on shared-lib/
+          CATALOG='[
+            {"image":"collabathon2025-frontend","context":"./frontend","dockerfile":"./frontend/Dockerfile","name":"frontend","shared":false,"build_args":"NEXT_PUBLIC_API_URL="},
+            {"image":"collabathon2025-auth-svc","context":".","dockerfile":"services/auth-svc/Dockerfile","name":"auth-svc","shared":true,"build_args":""},
+            {"image":"collabathon2025-transactions-svc","context":".","dockerfile":"services/transactions-svc/Dockerfile","name":"transactions-svc","shared":true,"build_args":""},
+            {"image":"collabathon2025-chatbot-svc","context":".","dockerfile":"services/chatbot-svc/Dockerfile","name":"chatbot-svc","shared":true,"build_args":""},
+            {"image":"collabathon2025-qa-svc","context":".","dockerfile":"services/qa-svc/Dockerfile","name":"qa-svc","shared":true,"build_args":""},
+            {"image":"collabathon2025-embedding-worker","context":".","dockerfile":"workers/embedding-worker/Dockerfile","name":"embedding-worker","shared":true,"build_args":""},
+            {"image":"collabathon2025-anomaly-worker","context":".","dockerfile":"workers/anomaly-worker/Dockerfile","name":"anomaly-worker","shared":true,"build_args":""},
+            {"image":"collabathon2025-outbox-relay","context":".","dockerfile":"workers/outbox-relay/Dockerfile","name":"outbox-relay","shared":true,"build_args":""},
+            {"image":"collabathon2025-mcp","context":".","dockerfile":"mcp_server/Dockerfile","name":"mcp","shared":true,"build_args":""},
+            {"image":"collabathon2025-migrate","context":".","dockerfile":"migrate/Dockerfile","name":"migrate","shared":true,"build_args":""},
+            {"image":"collabathon2025-seed","context":".","dockerfile":"seed/Dockerfile","name":"seed","shared":true,"build_args":""}
+          ]'
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            IMAGES=$(echo "$CATALOG" | jq -c '.')
+          else
+            IMAGES=$(echo "$CATALOG" | jq -c --argjson f "$FILTERS" '
+              [ .[] | select(
+                  ($f[.name] == "true")
+                  or (.shared and $f.shared == "true")
+                  or ($f.ci == "true")
+              ) ]')
+          fi
+          echo "images=$IMAGES" >> "$GITHUB_OUTPUT"
+          echo "Rebuilding: $(echo "$IMAGES" | jq -r '[.[].name] | join(", ")')"
+
+  # ---- build only the changed images ----
   build:
+    needs: detect
+    if: needs.detect.outputs.images != '[]'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -20,42 +87,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - image: collabathon2025-frontend
-            context: ./frontend
-            dockerfile: ./frontend/Dockerfile
-            build_args: |
-              NEXT_PUBLIC_API_URL=
-          - image: collabathon2025-auth-svc
-            context: .
-            dockerfile: services/auth-svc/Dockerfile
-          - image: collabathon2025-transactions-svc
-            context: .
-            dockerfile: services/transactions-svc/Dockerfile
-          - image: collabathon2025-chatbot-svc
-            context: .
-            dockerfile: services/chatbot-svc/Dockerfile
-          - image: collabathon2025-qa-svc
-            context: .
-            dockerfile: services/qa-svc/Dockerfile
-          - image: collabathon2025-embedding-worker
-            context: .
-            dockerfile: workers/embedding-worker/Dockerfile
-          - image: collabathon2025-anomaly-worker
-            context: .
-            dockerfile: workers/anomaly-worker/Dockerfile
-          - image: collabathon2025-outbox-relay
-            context: .
-            dockerfile: workers/outbox-relay/Dockerfile
-          - image: collabathon2025-mcp
-            context: .
-            dockerfile: mcp_server/Dockerfile
-          - image: collabathon2025-migrate
-            context: .
-            dockerfile: migrate/Dockerfile
-          - image: collabathon2025-seed
-            context: .
-            dockerfile: seed/Dockerfile
+        include: ${{ fromJSON(needs.detect.outputs.images) }}
 
     steps:
       - name: Checkout
