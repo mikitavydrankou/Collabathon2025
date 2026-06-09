@@ -27,7 +27,18 @@ spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 EOF
 
-IMAGE_TAG=$(git rev-parse HEAD 2>/dev/null || echo "latest")
+# Use git sha tag if CI has already built images for this commit,
+# otherwise fall back to latest. Images are only built when service
+# source changes — a deploy-only commit won't have sha-tagged images.
+SHA=$(git rev-parse HEAD 2>/dev/null || echo "")
+IMAGE_TAG="latest"
+if [ -n "$SHA" ]; then
+  REGISTRY="ghcr.io/mikitavydrankou"
+  # Probe one image (auth-svc) — if the sha tag exists, all shared images were built.
+  if docker manifest inspect "${REGISTRY}/collabathon2025-auth-svc:${SHA}" > /dev/null 2>&1; then
+    IMAGE_TAG="$SHA"
+  fi
+fi
 echo "==> helm upgrade --install (image tag: $IMAGE_TAG)"
 helm upgrade --install easyfocus "$CHART" \
   -f "$CHART/values.yaml" \

@@ -4,7 +4,7 @@
 image:
   registry: ghcr.io/mikitavydrankou
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 # CoreDNS ClusterIP — used by the gateway nginx resolver for runtime upstream
 # resolution. Default kind/k8s service CIDR puts kube-dns at .10.

@@ -8,6 +8,7 @@ metadata:
   name: migrate
   annotations:
     "argocd.argoproj.io/sync-wave": "-1"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
   ttlSecondsAfterFinished: 600
   backoffLimit: 6
@@ -36,6 +37,7 @@ metadata:
   name: seed
   annotations:
     "argocd.argoproj.io/sync-wave": "1"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
   ttlSecondsAfterFinished: 600
   backoffLimit: 6
