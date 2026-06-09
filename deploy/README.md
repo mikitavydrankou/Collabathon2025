@@ -17,7 +17,8 @@ deploy/
   argo/                    Argo CD Applications (easyfocus app + monitoring stack)
   metallb/pool.yaml        LB IP pool for the kind docker net
   gitops-up.sh             full GitOps bring-up (MetalLB + Envoy GW + Argo CD + apps)
-  cluster.sh               kind lifecycle + Argo/Grafana/Prometheus port-forwards
+  cluster.sh               kind lifecycle + edge/Argo/Grafana/Prometheus port-forwards
+  local-access.sh          standalone port-forward of the Envoy edge -> localhost
 ```
 
 Images come from `ghcr.io/mikitavydrankou/collabathon2025-*:latest` (public,
@@ -34,22 +35,21 @@ export TELEGRAM_BOT_TOKEN=...        # for alert delivery; omit to skip
 bash deploy/gitops-up.sh
 ```
 
-Then `bash deploy/cluster.sh creds` for Argo CD / Grafana / Prometheus URLs.
-
 ### Open the app
 
-MetalLB gives the Envoy edge a real IP — no port-forward. Grab it and point the
-hostname at it:
+The MetalLB IP is reachable pod-to-pod inside the cluster but NOT from the WSL
+host or Windows (kind + MetalLB L2 doesn't route to the docker host). So from a
+Windows browser, port-forward the Envoy edge:
 
 ```bash
-kubectl -n envoy-gateway-system get svc \
-  -l gateway.envoyproxy.io/owning-gateway-name=easyfocus \
-  -o jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}'
+bash deploy/cluster.sh pf      # edge -> localhost:8081 (+ Argo/Grafana/Prom)
+bash deploy/cluster.sh creds   # prints all URLs + logins
+# or just the edge:
+bash deploy/local-access.sh    # edge -> localhost:8080
 ```
 
-Add `<LB_IP> easyfocus.local` to the Windows hosts file
-(`C:\Windows\System32\drivers\etc\hosts`), then open
-<http://easyfocus.local> — login `alex.brown` / `password123`.
+Open <http://localhost:8081> (or `:8080`) — login `alex.brown` / `password123`.
+The edge accepts Host `localhost`, so no hosts-file edit is needed.
 
 **Single-origin**: one host serves both the UI and the API (the edge routes
 `/auth`, `/qa`, `/transactions`, ... to the gateway, everything else to the
@@ -70,10 +70,12 @@ calls are same-origin relative — no CORS, one cert.
   takes `--build-arg NEXT_PUBLIC_API_URL` (CI passes `""` = same-origin). The
   ghcr image only picks this up after a CI run on the updated Dockerfile.
 - **LB**: kind has no cloud LB, so `gitops-up.sh` installs **MetalLB**
-  (`deploy/metallb/pool.yaml`) which hands the Envoy Gateway Service a real IP
-  from the kind docker net. The Gateway reaches `PROGRAMMED=True` and is reachable
-  directly at `http://<LB_IP>` — exactly what a cloud LB does on GKE. If your kind
-  docker net isn't `172.21.0.0/16`, adjust the pool range (see the script).
+  (`deploy/metallb/pool.yaml`) to hand the Envoy Gateway Service an IP from the
+  kind docker net. This makes the Gateway reach `PROGRAMMED=True` — required so
+  Argo's health gate passes (it blocks the sync otherwise). The IP is only
+  routable inside the cluster though; for host/Windows access still port-forward
+  (see "Open the app"). On GKE the cloud LB gives a genuinely external IP. If your
+  kind docker net isn't `172.21.0.0/16`, adjust the pool range (see the script).
 
 - **Teardown**: `kind delete cluster --name easyfocus`.
 

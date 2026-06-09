@@ -71,6 +71,11 @@ _pf() { # ns svc localport remoteport
 cmd_pf() {
   cmd_pf_stop || true
   : > "$PF_PIDFILE"
+  # Envoy edge svc name carries a per-Gateway hash suffix — resolve it by label.
+  EDGE_SVC=$(kubectl -n envoy-gateway-system get svc \
+    -l gateway.envoyproxy.io/owning-gateway-name=easyfocus \
+    -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+  [ -n "$EDGE_SVC" ] && _pf envoy-gateway-system "$EDGE_SVC" 8081 80
   _pf monitoring kube-prometheus-stack-grafana    3001 80
   _pf monitoring kube-prometheus-stack-prometheus 9090 9090
   _pf argocd     argocd-server                    8080 443
@@ -88,6 +93,7 @@ cmd_pf_stop() {
 }
 
 cmd_creds() {
+  echo "  App edge   http://localhost:8081    alex.brown / password123  (Host: localhost)"
   echo "  Grafana    http://localhost:3001    admin / admin"
   echo -n "  Argo CD    https://localhost:8080   admin / "
   kubectl -n argocd get secret argocd-initial-admin-secret \
