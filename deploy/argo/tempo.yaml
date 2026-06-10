@@ -35,6 +35,7 @@ spec:
             requests:
               cpu: 50m
               memory: 256Mi
+              ephemeral-storage: 256Mi
             limits:
               # 512Mi restarted (503) under trace ingest + search; 1Gi is stable
               # for a single-binary demo Tempo.

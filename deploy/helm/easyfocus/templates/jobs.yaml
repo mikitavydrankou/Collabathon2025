@@ -32,9 +32,11 @@ spec:
             requests:
               cpu: 10m
               memory: 16Mi
+              ephemeral-storage: 256Mi
             limits:
               cpu: 100m
               memory: 64Mi
+              ephemeral-storage: 256Mi
       containers:
         - name: migrate
           image: {{ .Values.image.registry }}/collabathon2025-migrate:{{ .Values.image.tag }}
@@ -69,9 +71,11 @@ spec:
             requests:
               cpu: 10m
               memory: 16Mi
+              ephemeral-storage: 256Mi
             limits:
               cpu: 100m
               memory: 64Mi
+              ephemeral-storage: 256Mi
       containers:
         - name: seed
           image: {{ .Values.image.registry }}/collabathon2025-seed:{{ .Values.image.tag }}

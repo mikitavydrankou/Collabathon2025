@@ -23,8 +23,10 @@ spec:
           requests:
             cpu: 25m
             memory: 64Mi
+            ephemeral-storage: 256Mi
           limits:
             memory: 128Mi
+            ephemeral-storage: 256Mi
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring

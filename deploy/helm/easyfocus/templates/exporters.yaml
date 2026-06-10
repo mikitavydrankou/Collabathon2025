@@ -30,9 +30,11 @@ spec:
             requests:
               cpu: 10m
               memory: 32Mi
+              ephemeral-storage: 256Mi
             limits:
               cpu: 100m
               memory: 64Mi
+              ephemeral-storage: 256Mi
 ---
 apiVersion: v1
 kind: Service
@@ -89,6 +91,7 @@ spec:
             requests:
               cpu: 10m
               memory: 32Mi
+              ephemeral-storage: 256Mi
             limits:
               # 200m (was 100m) — exporter throttled ~27% at 100m under scrape load
               cpu: 200m

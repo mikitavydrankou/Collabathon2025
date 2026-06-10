@@ -104,15 +104,21 @@ kubectl apply -n argocd --server-side --force-conflicts -f "https://raw.githubus
 # under its own field manager, so the server-side apply above won't revert them
 # on re-runs. Autopilot minimum is 50m CPU / 52Mi memory.
 if [ "$IS_GKE" -eq 1 ]; then
-  echo "==> trimming Argo CD resource requests (Autopilot defaults are 0.5 vCPU / 2Gi per container)"
+  # ephemeral-storage matters as much as cpu/mem: Autopilot defaults it to 1Gi
+  # per container, which exhausts the 30GB frugal nodes' disk on paper long
+  # before cpu/mem run out ("Insufficient ephemeral-storage" at scheduling).
+  echo "==> trimming Argo CD resource requests (Autopilot defaults are 0.5 vCPU / 2Gi / 1Gi-ephemeral per container)"
   kubectl -n argocd set resources deploy/argocd-server deploy/argocd-repo-server \
-    --requests=cpu=100m,memory=256Mi
+    --requests=cpu=100m,memory=256Mi,ephemeral-storage=256Mi \
+    --limits=ephemeral-storage=256Mi
   kubectl -n argocd set resources \
     deploy/argocd-applicationset-controller deploy/argocd-dex-server \
     deploy/argocd-notifications-controller deploy/argocd-redis \
-    --requests=cpu=50m,memory=128Mi
+    --requests=cpu=50m,memory=128Mi,ephemeral-storage=128Mi \
+    --limits=ephemeral-storage=128Mi
   kubectl -n argocd set resources statefulset/argocd-application-controller \
-    --requests=cpu=250m,memory=512Mi
+    --requests=cpu=250m,memory=512Mi,ephemeral-storage=256Mi \
+    --limits=ephemeral-storage=256Mi
 fi
 
 kubectl -n argocd rollout status deploy/argocd-server --timeout=300s

@@ -46,8 +46,10 @@ spec:
             requests:
               cpu: 50m
               memory: 128Mi
+              ephemeral-storage: 256Mi
             limits:
               memory: 384Mi
+              ephemeral-storage: 256Mi
         # Zero out the scalable-mode components and heavy optional pieces.
         backend:
           replicas: 0

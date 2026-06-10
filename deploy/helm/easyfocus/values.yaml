@@ -17,9 +17,11 @@ defaultResources:
   requests:
     cpu: 25m
     memory: 96Mi
+    ephemeral-storage: 256Mi
   limits:
     cpu: 250m
     memory: 256Mi
+    ephemeral-storage: 256Mi
 
 # Non-secret env, mounted into every backend/worker via envFrom configMap.
 config:
@@ -103,9 +105,11 @@ frontend:
     requests:
       cpu: 25m
       memory: 128Mi
+      ephemeral-storage: 256Mi
     limits:
       cpu: 250m
       memory: 256Mi
+      ephemeral-storage: 256Mi
 
 gateway:
   port: 8000
@@ -113,9 +117,11 @@ gateway:
     requests:
       cpu: 10m
       memory: 16Mi
+      ephemeral-storage: 256Mi
     limits:
       cpu: 100m
       memory: 64Mi
+      ephemeral-storage: 256Mi
 
 # Stateful infra. Pulled from public images, not built.
 infra:
@@ -126,18 +132,22 @@ infra:
       requests:
         cpu: 50m
         memory: 128Mi
+        ephemeral-storage: 256Mi
       limits:
         cpu: 500m
         memory: 384Mi
+        ephemeral-storage: 256Mi
   redis:
     image: redis:7-alpine
     resources:
       requests:
         cpu: 10m
         memory: 16Mi
+        ephemeral-storage: 256Mi
       limits:
         cpu: 100m
         memory: 64Mi
+        ephemeral-storage: 256Mi
   kafka:
     image: apache/kafka:3.9.0
     storage: 1Gi
@@ -148,6 +158,7 @@ infra:
       requests:
         cpu: 100m
         memory: 640Mi
+        ephemeral-storage: 256Mi
       limits:
         # heap 512m + JVM non-heap (metaspace/threads/direct buffers) headroom.
         cpu: 1000m
@@ -159,9 +170,11 @@ infra:
       requests:
         cpu: 25m
         memory: 128Mi
+        ephemeral-storage: 256Mi
       limits:
         cpu: 250m
         memory: 384Mi
+        ephemeral-storage: 256Mi
 
 # Gateway API edge (ingress-nginx retired 2026-03-24 → migrated to Gateway API).
 # Single-origin: one host serves UI + API (path-split to frontend / gateway).

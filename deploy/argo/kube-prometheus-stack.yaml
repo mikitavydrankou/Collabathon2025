@@ -29,8 +29,10 @@ spec:
               requests:
                 cpu: 200m
                 memory: 512Mi
+                ephemeral-storage: 256Mi
               limits:
                 memory: 1Gi
+                ephemeral-storage: 256Mi
             storageSpec:
               volumeClaimTemplate:
                 spec:
@@ -55,6 +57,7 @@ spec:
             requests:
               cpu: 50m
               memory: 256Mi
+              ephemeral-storage: 256Mi
             limits:
               # 256Mi OOMKilled once the Tempo datasource + trace search (bleve)
               # were added alongside Prometheus/Loki. 512Mi holds the 3 datasources.
@@ -75,8 +78,10 @@ spec:
               requests:
                 cpu: 25m
                 memory: 64Mi
+                ephemeral-storage: 256Mi
               limits:
                 memory: 128Mi
+                ephemeral-storage: 256Mi
           # Telegram routing for EasyFocus alerts (PrometheusRule easyfocus-alerts).
           # Token is read from the mounted Secret via bot_token_file (Alertmanager
           # >=0.26). chat_id is a private chat — not sensitive, safe in git.
@@ -108,15 +113,19 @@ spec:
             requests:
               cpu: 25m
               memory: 64Mi
+              ephemeral-storage: 256Mi
             limits:
               memory: 256Mi
+              ephemeral-storage: 256Mi
         kube-state-metrics:
           resources:
             requests:
               cpu: 10m
               memory: 64Mi
+              ephemeral-storage: 256Mi
             limits:
               memory: 128Mi
+              ephemeral-storage: 256Mi
         # node-exporter needs hostPath /proc + /sys — Autopilot blocks those, the
         # DaemonSet would never schedule. Node metrics come from GKE's own agents.
         nodeExporter:
