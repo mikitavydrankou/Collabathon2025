@@ -152,6 +152,10 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/kafka/data
+              # ext4 PDs put lost+found at the volume root and Kafka refuses to
+              # start with a non-topic directory in its log dir; subPath mounts
+              # a subdirectory instead. No-op on kind's local-path.
+              subPath: data
   volumeClaimTemplates:
     - metadata:
         name: data
