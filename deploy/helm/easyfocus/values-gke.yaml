@@ -9,7 +9,7 @@
 # Value = `terraform output -raw artifact_registry_host`
 #   <region>-docker.pkg.dev/<project>/easyfocus
 image:
-  registry: REGION-docker.pkg.dev/PROJECT_ID/easyfocus
+  registry: europe-central2-docker.pkg.dev/project-20a72ce3-6c66-473c-89e/easyfocus
   # Pin to a git SHA in CI/Argo for reproducible deploys; `latest` ok for manual.
   tag: latest
 

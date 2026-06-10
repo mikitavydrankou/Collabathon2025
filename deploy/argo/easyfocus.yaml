@@ -22,6 +22,8 @@ spec:
     path: deploy/helm/easyfocus
     helm:
       # Chart values.yaml is auto-loaded; override only what GitOps needs.
+      valueFiles:
+        - values-gke.yaml
       parameters:
         - name: createSecret
           value: "false"
