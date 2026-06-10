@@ -168,12 +168,20 @@ infra:
 # className is the only thing that changes kind → GKE; HTTPRoute stays identical.
 edge:
   enabled: true
-  className: eg            # Envoy Gateway. On GKE swap to gke-l7-* if going native.
+  className: eg            # Envoy Gateway. On GKE swap to gke-l7-* (values-gke.yaml).
   host: easyfocus.local
   # Extra accepted Host headers. `localhost` lets the browser hit the kind
   # port-forward at http://localhost:<port> with no hosts-file edit.
   extraHostnames:
     - localhost
+  # Pin the LB to a reserved static IP by name (GKE only). Empty = let the
+  # controller allocate (kind/Envoy has no cloud LB anyway).
+  gatewayAddressName: ""
+  # TLS termination at the edge. Off on kind (plain HTTP). On GKE: values-gke.yaml
+  # flips enabled=true; cert-manager fills the secretName Secret, :80 -> 301 https.
+  tls:
+    enabled: false
+    secretName: easyfocus-tls
 
 # kafka-ui / pgweb — off by default.
 devtools:

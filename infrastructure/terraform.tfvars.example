@@ -1,0 +1,7 @@
+# Copy to terraform.tfvars and fill in. terraform.tfvars is gitignored.
+project_id = "your-gcp-project-id"
+
+# Optional overrides (defaults shown):
+# region       = "europe-central2"
+# cluster_name = "easyfocus"
+# ar_repo_name = "easyfocus"

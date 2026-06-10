@@ -84,6 +84,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write   # mint the OIDC token for GCP Workload Identity Federation
     strategy:
       fail-fast: false
       matrix:
@@ -107,6 +108,51 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # ---- optional mirror to GCP Artifact Registry ----
+      # Inert until the repo var GCP_PROJECT_ID is set (Settings > Variables).
+      # Auth is keyless via Workload Identity Federation — no JSON key in secrets.
+      # Required repo vars: GCP_PROJECT_ID, GCP_WIF_PROVIDER, GCP_DEPLOY_SA.
+      # Optional (defaults shown): GCP_REGION=europe-central2, AR_REPO=easyfocus.
+      - name: Authenticate to GCP
+        id: gcpauth
+        if: ${{ vars.GCP_PROJECT_ID != '' }}
+        uses: google-github-actions/auth@v2
+        with:
+          token_format: access_token
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+
+      - name: Log in to Artifact Registry
+        if: ${{ vars.GCP_PROJECT_ID != '' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.GCP_REGION || 'europe-central2' }}-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.gcpauth.outputs.access_token }}
+
+      # Assemble the tag list: always ghcr, plus Artifact Registry when configured.
+      - name: Compose image tags
+        id: tags
+        env:
+          OWNER: ${{ steps.owner.outputs.name }}
+          IMAGE: ${{ matrix.image }}
+          SHA: ${{ github.sha }}
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          GCP_REGION: ${{ vars.GCP_REGION }}
+          AR_REPO: ${{ vars.AR_REPO }}
+        run: |
+          {
+            echo "tags<<EOF"
+            echo "${REGISTRY}/${OWNER}/${IMAGE}:latest"
+            echo "${REGISTRY}/${OWNER}/${IMAGE}:${SHA}"
+            if [ -n "$GCP_PROJECT_ID" ]; then
+              AR_HOST="${GCP_REGION:-europe-central2}-docker.pkg.dev/${GCP_PROJECT_ID}/${AR_REPO:-easyfocus}"
+              echo "${AR_HOST}/${IMAGE}:latest"
+              echo "${AR_HOST}/${IMAGE}:${SHA}"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build & push ${{ matrix.image }}
         uses: docker/build-push-action@v6
         with:
@@ -114,9 +160,7 @@ jobs:
           file: ${{ matrix.dockerfile }}
           build-args: ${{ matrix.build_args }}
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ steps.owner.outputs.name }}/${{ matrix.image }}:latest
-            ${{ env.REGISTRY }}/${{ steps.owner.outputs.name }}/${{ matrix.image }}:${{ github.sha }}
+          tags: ${{ steps.tags.outputs.tags }}
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
 

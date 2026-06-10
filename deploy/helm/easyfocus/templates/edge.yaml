@@ -1,14 +1,27 @@
 {{- if .Values.edge.enabled }}
+{{- $tls := .Values.edge.tls | default dict }}
 # Single-origin edge. One hostname serves the SPA and the API: backend path
 # prefixes go to the nginx app-gateway, everything else to the Next.js frontend.
 # No CORS, one TLS cert. The frontend bundle is built with NEXT_PUBLIC_API_URL=""
 # so it calls these paths same-origin.
+#
+# kind  : HTTP only (edge.tls.enabled=false), className eg (Envoy Gateway).
+# GKE   : HTTPS (edge.tls.enabled=true) on a managed L7 LB (gke-l7-* class),
+#         HTTP :80 redirects to :443; cert lives in the edge.tls.secretName Secret
+#         (filled by cert-manager). See values-gke.yaml.
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: easyfocus
 spec:
   gatewayClassName: {{ .Values.edge.className }}
+  {{- with .Values.edge.gatewayAddressName }}
+  # Pin the LB to the reserved static IP (Terraform google_compute_global_address)
+  # so the DuckDNS A-record never has to change.
+  addresses:
+    - type: NamedAddress
+      value: {{ . | quote }}
+  {{- end }}
   listeners:
     - name: http
       protocol: HTTP
@@ -16,6 +29,20 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+    {{- if $tls.enabled }}
+    - name: https
+      protocol: HTTPS
+      port: 443
+      hostname: {{ .Values.edge.host | quote }}
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: {{ $tls.secretName | default "easyfocus-tls" }}
+      allowedRoutes:
+        namespaces:
+          from: Same
+    {{- end }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -24,6 +51,10 @@ metadata:
 spec:
   parentRefs:
     - name: easyfocus
+      {{- if $tls.enabled }}
+      # Serve traffic on the TLS listener; :80 only redirects (route below).
+      sectionName: https
+      {{- end }}
   hostnames:
     - {{ .Values.edge.host | quote }}
 {{- range .Values.edge.extraHostnames }}
@@ -51,4 +82,24 @@ spec:
       backendRefs:
         - name: frontend
           port: {{ .Values.frontend.port }}
+{{- if $tls.enabled }}
+---
+# Plain :80 -> 301 to https. Bound to the HTTP listener only.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: easyfocus-https-redirect
+spec:
+  parentRefs:
+    - name: easyfocus
+      sectionName: http
+  hostnames:
+    - {{ .Values.edge.host | quote }}
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301
+{{- end }}
 {{- end }}

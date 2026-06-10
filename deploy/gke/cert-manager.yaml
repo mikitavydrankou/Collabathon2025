@@ -1,0 +1,37 @@
+# cert-manager as an Argo Application. Issues + auto-renews the Let's Encrypt
+# cert for the edge. Gateway API support is behind a feature gate, enabled here
+# so the HTTP-01 solver can spin up a temporary HTTPRoute on our Gateway.
+#
+# Apply path: deploy/gke bootstrap applies this, then clusterissuer.yaml +
+# certificate.yaml once cert-manager's CRDs are Established.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://charts.jetstack.io
+    chart: cert-manager
+    targetRevision: v1.16.2
+    helm:
+      values: |
+        crds:
+          enabled: true
+        # Gateway API HTTP-01 solver (creates a transient HTTPRoute).
+        config:
+          apiVersion: controller.config.cert-manager.io/v1alpha1
+          kind: ControllerConfiguration
+          enableGatewayAPI: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

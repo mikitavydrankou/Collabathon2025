@@ -1,144 +1,124 @@
 # Architecture
 
-EasyFocus Assistant is a multi-service app: a Next.js frontend, a FastAPI backend
-that orchestrates the AI agents, an MCP tool server, and PostgreSQL — all wired
-together with Docker Compose.
+EasyFocus started as a hackathon monolith and was restructured into a
+**microservices** platform: independent FastAPI services, async messaging over
+Kafka, a Next.js frontend, an MCP tool server — deployed to Kubernetes via a Helm
+chart and Argo CD GitOps, with full observability and Terraform-provisioned GKE.
 
 ```
-┌────────────┐      ┌─────────────────────────────┐      ┌────────────┐
-│  Frontend  │─────▶│           Backend           │─────▶│ PostgreSQL │
-│  Next.js   │ HTTP │  FastAPI · LangChain agents │ SQL  │     17     │
-│  :3000     │◀─────│  :8000                      │◀─────│  :5432     │
-└────────────┘      └──────────────┬──────────────┘      └─────┬──────┘
-                                   │ MCP                       │
-                                   ▼                           │
-                            ┌────────────┐                     │
-                            │ MCP Server │─────────────────────┘
-                            │  :8001     │
-                            └────────────┘   pgweb :8080 (DB admin UI)
+                              ┌──────────────────────────────┐
+        client ──HTTPS──▶     │   Gateway API edge (L7 LB)    │
+                              │   kind: Envoy · GKE: gke-l7   │
+                              └───────────────┬──────────────┘
+                       ┌──────────────────────┼───────────────────────┐
+                       ▼ /                     ▼ /auth /qa /chatbot ... ▼
+                ┌────────────┐          ┌──────────────────┐   nginx app-gateway
+                │  frontend  │          │  auth-svc        │   (path → service)
+                │  Next.js   │          │  transactions-svc│
+                │  :3000     │          │  chatbot-svc     │
+                └────────────┘          │  qa-svc · mcp    │
+                                        └────────┬─────────┘
+                          produce on             │
+                       transactions.created      ▼
+                              ┌──────────── Kafka (KRaft, 1 broker) ───────────┐
+                              │              2 consumer groups                 │
+                              ▼                                                ▼
+                     ┌──────────────────┐                          ┌──────────────────┐
+                     │ embedding-worker │──▶ Chroma (vector RAG)    │  anomaly-worker  │──▶ Postgres flag
+                     └──────────────────┘                          └──────────────────┘
+       outbox-relay: transactional outbox in Postgres → Kafka (exactly-once-ish, no dual-write)
+
+   shared Postgres 17  ·  Redis (OpenAI daily cap + gateway rate-limit)  ·  Chroma (embeddings)
 ```
 
 ## Services
 
-| Service    | Port   | Role                                                     |
-| ---------- | ------ | -------------------------------------------------------- |
-| `frontend` | `3000` | Next.js 16 UI (React 18, Tailwind, shadcn/ui)            |
-| `backend`  | `8000` | FastAPI — auth, chatbot, QA agents, transactions         |
-| `mcp`      | `8001` | Model Context Protocol tool server                       |
-| `db`       | `5432` | PostgreSQL 17 (persisted in `postgres_data` volume)      |
-| `pgweb`    | `8080` | Web DB admin UI                                          |
+Each service has its own `pyproject.toml` + `Dockerfile` and pulls a shared,
+installable library (`shared-lib/`) via a poetry path-dependency. JWT is validated
+locally in every service through a shared secret — no network hop to auth.
 
-## Backend
+| Service             | Port   | Role                                                          |
+| ------------------- | ------ | ------------------------------------------------------------ |
+| `frontend`          | `3000` | Next.js 16 UI (React 18, Tailwind, shadcn/ui)                |
+| `auth-svc`          | `8000` | Login, JWT issue, user lookup                                |
+| `transactions-svc`  | `8000` | Transactions CRUD/stats, anomaly validation, outbox producer |
+| `chatbot-svc`       | `8000` | Payment-assistant chat (LangChain agents, MCP client)        |
+| `qa-svc`            | `8000` | Conversational search — RAG + SQL multi-agent                |
+| `mcp`               | `8001` | Model Context Protocol tool server                           |
+| `embedding-worker`  | —      | Kafka consumer → embeds transactions into Chroma             |
+| `anomaly-worker`    | —      | Kafka consumer → scores transactions, flags in Postgres      |
+| `outbox-relay`      | —      | Polls the Postgres outbox, publishes to Kafka               |
+| `gateway`           | `8000` | nginx app-gateway, path-routes API prefixes to services      |
 
-Core Python FastAPI application handling AI orchestration, authentication, and data processing.
+## Async / messaging
 
-```
-backend/src/backend/
-├── main.py                 # FastAPI application entry point
-├── db.py                   # Database configuration
-├── seed.py                 # Database seeding utilities
-│
-├── auth/                   # Authentication & authorization
-│   ├── routes.py           # Auth API endpoints
-│   ├── schemas.py          # Auth data models
-│   └── utils.py            # JWT, password hashing
-│
-├── chatbot/                # Payment assistant chatbot
-│   ├── agents.py           # Chatbot agent logic
-│   ├── service.py          # Chatbot orchestration
-│   ├── llm.py              # LLM integration
-│   ├── mcp_client.py       # MCP server client
-│   ├── routes.py           # Chatbot API endpoints
-│   └── schemas.py          # Chatbot data models
-│
-├── qa/                     # Question-answering system
-│   ├── agents/             # Multi-agent system
-│   │   ├── main_agent.py   # Main orchestrator agent
-│   │   ├── rag_agent.py    # RAG-based retrieval agent
-│   │   └── sql_agent.py    # SQL query generation agent
-│   ├── rag/                # Retrieval-Augmented Generation
-│   │   ├── retriever.py    # Vector search & retrieval
-│   │   ├── create_embeddings.py  # Embedding generation
-│   │   └── parse_transactions.py # Transaction parsing
-│   ├── sql/crud.py         # Database CRUD operations
-│   ├── tools/              # Agent tools (rag_tool, sql_tool)
-│   ├── chatbot_service.py  # QA service orchestration
-│   ├── memory.py           # Conversation memory
-│   └── routes.py           # QA API endpoints
-│
-├── transactions/           # Transaction management
-│   ├── routes.py · schemas.py · services.py · examples.py
-│
-├── utils/                  # Utilities
-│   ├── routes.py · schemas.py
-│   └── unusual_behavior.py # Anomaly detection
-│
-└── models/                 # Database models
-```
+The transactional **outbox** pattern avoids the dual-write problem: a transaction
+write and its event are committed in the same Postgres transaction (table
+`OutboxEvent`); `outbox-relay` ships those rows to the Kafka topic
+`transactions.created`. Two independent consumer groups react:
 
-**Stack:** FastAPI · SQLAlchemy 2 · Pydantic · LangChain + OpenAI · ChromaDB (vector store) · python-jose JWT · bcrypt.
+- **embedding-worker** → generates an embedding, upserts into Chroma (powers RAG search).
+- **anomaly-worker** → scores the transaction, sets an anomaly flag surfaced in the UI.
 
-## Frontend
+OpenTelemetry trace context is propagated through the outbox into the Kafka
+records, so a trace spans HTTP → outbox → worker in Tempo.
 
-Next.js application for user interface and interaction.
+## Repository layout
 
 ```
-frontend/
-├── app/                    # Next.js app directory (page, layout, globals.css)
-├── components/
-│   ├── ui/                 # Reusable shadcn/ui primitives
-│   ├── login-screen.tsx
-│   ├── dashboard-screen.tsx
-│   ├── chatbot-screen.tsx       # Payment assistant chat
-│   ├── qa-chatbot-screen.tsx    # Smart search interface
-│   ├── send-money-page.tsx      # Transaction interface
-│   ├── ai-helper-popup.tsx      # AI assistance overlay
-│   └── payment-suggestion-popup.tsx
-├── hooks/                  # use-mobile, use-toast
-├── lib/                    # api.ts (API client), utils.ts
-└── public/                 # Static assets
+services/<name>-svc/<name>_svc/   # hyphen dir, underscore package; entrypoint <name>_svc.main:app
+workers/{embedding,anomaly}-worker/, workers/outbox-relay/
+shared-lib/shared/                # app_factory, db, security, messaging, seed, migrations, tracing, usage, models
+mcp_server/                       # MCP tool server
+gateway/nginx.conf                # edge app-gateway
+frontend/                         # Next.js app
+migrate/ · seed/                  # one-shot Jobs (Alembic migrate, DB seed)
+deploy/                           # helm/ · argo/ · gke/ · kind/ · metallb/ + bootstrap scripts
+infrastructure/                   # Terraform: GKE Autopilot, Artifact Registry, VPC, WIF, static IP
+tests/                            # pytest suite (security, usage fail-open, anomaly validation)
 ```
 
-**Stack:** Next.js 16 · React 18 · Tailwind CSS · shadcn/ui (Radix) · react-hook-form + zod · recharts.
+## Deployment
 
-## MCP Server
+- **Helm** — one umbrella chart `deploy/helm/easyfocus` renders the whole stack
+  (~30 objects). `values.yaml` = base (kind), `values-gke.yaml` = GKE overlay,
+  `values-local.yaml` = gitignored secrets.
+- **Argo CD** — the cluster syncs the app + monitoring stack from this repo
+  (`deploy/argo/`). `deploy/gitops-up.sh` bootstraps the bits Argo can't
+  (cluster, MetalLB, Gateway CRDs, Argo itself, out-of-band Secrets).
+- **Edge** — Gateway API HTTPRoute, single origin (one host serves UI + API,
+  path-split, no CORS). Envoy Gateway on kind; managed L7 LB (`gke-l7-*`) on GKE,
+  TLS terminated with a cert-manager + Let's Encrypt cert (`deploy/gke/`).
+- **Cloud** — Terraform (`infrastructure/`) provisions GKE Autopilot, Artifact
+  Registry, a dedicated VPC, a reserved edge IP, and Workload Identity Federation
+  for keyless CI image push.
 
-Model Context Protocol server exposing banking tools to the agents.
+## Observability
 
-```
-mcp_server/
-├── server.py               # MCP server entry point
-├── tools.py                # MCP tool definitions
-├── database.py             # Database operations
-├── schemas.py              # Data schemas
-├── app.py                  # Application setup
-└── Dockerfile
-```
-
-## Shared
-
-Shared code and models across services.
-
-```
-shared/
-├── database.py             # Shared database configuration
-└── models/                 # user.py · transaction.py · person_to_contact.py
-```
+- **Metrics** — Prometheus (kube-prometheus-stack) scrapes per-service `/metrics`
+  (prometheus-fastapi-instrumentator) via ServiceMonitors, plus kafka-exporter
+  (consumer lag) and postgres-exporter. Grafana dashboard `easyfocus-overview`:
+  RED per service, error ratio, Kafka lag per group, Postgres connections, RPS.
+- **Logs** — Loki + promtail, correlated in Grafana.
+- **Traces** — Tempo + OpenTelemetry, context propagated through the Kafka outbox.
+- **Alerts** — PrometheusRule → Alertmanager → Telegram.
 
 ## Configuration
 
-All config lives in `.env` (copy from `.env.example`).
+Non-secret config is mounted into every service via a ConfigMap (`config:` in
+`values.yaml`); secrets (`DATABASE_PASSWORD`, `JWT_SECRET`, `OPENAI_API_KEY`)
+come from the gitignored `values-local.yaml`. For Docker Compose, all config
+lives in `.env` (copy from `.env.example`).
 
-| Variable             | Default               | Purpose                              |
-| -------------------- | --------------------- | ------------------------------------ |
-| `DATABASE_NAME`      | —                     | PostgreSQL database name             |
-| `DATABASE_USERNAME`  | —                     | PostgreSQL user                      |
-| `DATABASE_PASSWORD`  | —                     | PostgreSQL password (set before deploy) |
-| `DB_HOST`            | `db`                  | DB host (compose service name)       |
-| `DB_PORT`            | `5432`                | DB port                              |
-| `MCP_SERVER_URL`     | `http://localhost:8001` | MCP tool server URL                |
-| `OPENAI_API_KEY`     | —                     | OpenAI key for LLM + embeddings      |
-| `NEXT_PUBLIC_API_URL`| `http://localhost:8000` | Backend URL exposed to the frontend |
+| Variable             | Purpose                                            |
+| -------------------- | -------------------------------------------------- |
+| `DATABASE_*`         | PostgreSQL name / user / password                  |
+| `JWT_SECRET`         | Shared HMAC secret — every service validates JWT locally |
+| `OPENAI_API_KEY`     | OpenAI key for LLM + embeddings                    |
+| `KAFKA_BROKERS`      | Kafka bootstrap (`kafka:9092`)                     |
+| `REDIS_URL`          | Redis for the OpenAI daily cap + rate-limit        |
+| `CHROMA_HOST/PORT`   | Vector store for RAG                               |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Tempo OTLP endpoint (empty disables tracing) |
 
 ## Why accessibility matters
 

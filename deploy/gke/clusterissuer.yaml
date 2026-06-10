@@ -1,0 +1,42 @@
+# Let's Encrypt issuers. HTTP-01 challenge solved via the Gateway API: cert-manager
+# provisions a short-lived HTTPRoute on our `easyfocus` Gateway pointing at its
+# solver pod, LE hits http://<host>/.well-known/acme-challenge/... over :80.
+#
+# Use `letsencrypt-staging` first to dodge LE rate limits while testing (issues an
+# untrusted cert — browser warns, that's expected). Flip the Certificate's
+# issuerRef to `letsencrypt-prod` once the flow works end to end.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: kozlownikita66@gmail.com
+    privateKeySecretRef:
+      name: letsencrypt-staging-account
+    solvers:
+      - http01:
+          gatewayHTTPRoute:
+            parentRefs:
+              - name: easyfocus
+                namespace: default
+                kind: Gateway
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: kozlownikita66@gmail.com
+    privateKeySecretRef:
+      name: letsencrypt-prod-account
+    solvers:
+      - http01:
+          gatewayHTTPRoute:
+            parentRefs:
+              - name: easyfocus
+                namespace: default
+                kind: Gateway

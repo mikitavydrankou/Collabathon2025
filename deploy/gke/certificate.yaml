@@ -1,0 +1,20 @@
+# The edge cert. cert-manager solves the ACME challenge, then writes the signed
+# cert + key into Secret `easyfocus-tls` (ns default) — exactly the secretName the
+# Gateway's HTTPS listener references (values-gke.yaml edge.tls.secretName).
+# Renews automatically ~30 days before expiry.
+#
+# dnsNames MUST match edge.host in values-gke.yaml. Update both if your DuckDNS
+# hostname differs. Start with issuerRef letsencrypt-staging, switch to -prod
+# once issuance succeeds (delete the secret to force re-issue against prod).
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: easyfocus-tls
+  namespace: default
+spec:
+  secretName: easyfocus-tls
+  dnsNames:
+    - easyfocus.duckdns.org
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer

@@ -1,0 +1,28 @@
+# GKE production overlay. Layer on top of the base values:
+#   helm upgrade --install easyfocus . -f values.yaml -f values-gke.yaml -f values-local.yaml
+# (Argo: add this file to the Application's helm.valueFiles — see deploy/argo.)
+#
+# Only the cloud-specific deltas live here; everything else stays as values.yaml.
+# Fill the two <PLACEHOLDERS> from `terraform output` after `terraform apply`.
+
+# Pull images from Artifact Registry instead of ghcr.
+# Value = `terraform output -raw artifact_registry_host`
+#   <region>-docker.pkg.dev/<project>/easyfocus
+image:
+  registry: REGION-docker.pkg.dev/PROJECT_ID/easyfocus
+  # Pin to a git SHA in CI/Argo for reproducible deploys; `latest` ok for manual.
+  tag: latest
+
+edge:
+  # Managed external L7 load balancer (Google), global. Pairs with the global
+  # static IP reserved in Terraform.
+  className: gke-l7-global-external-managed
+  # Your DuckDNS hostname. Must match the cert dnsNames (deploy/gke/certificate.yaml).
+  host: easyfocus.duckdns.org
+  # No localhost on a public cert — public host only.
+  extraHostnames: []
+  # `terraform output -raw edge_ip_name` (defaults to "<cluster_name>-ip").
+  gatewayAddressName: easyfocus-ip
+  tls:
+    enabled: true
+    secretName: easyfocus-tls   # cert-manager writes the LE cert here
