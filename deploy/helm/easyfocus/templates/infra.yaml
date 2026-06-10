@@ -121,6 +121,12 @@ spec:
       labels:
         app: kafka
     spec:
+      # apache/kafka runs as uid 1000 (appuser). A cloud PD mounts root-owned,
+      # so without fsGroup the broker can't write its data dir
+      # (AccessDeniedException on meta.properties). kind's local-path was
+      # world-writable, which is why this only bit on GKE.
+      securityContext:
+        fsGroup: 1000
       containers:
         - name: kafka
           image: {{ .Values.infra.kafka.image }}
