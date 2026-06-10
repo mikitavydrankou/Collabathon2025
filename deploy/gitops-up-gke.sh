@@ -83,7 +83,26 @@ fi
 # --- 4. Argo CD ---
 echo "==> Argo CD ${ARGOCD_VERSION}"
 kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
-kubectl apply -n argocd -f "https://raw.githubusercontent.com/argoproj/argo-cd/${ARGOCD_VERSION}/manifests/install.yaml"
+kubectl apply -n argocd --server-side --force-conflicts -f "https://raw.githubusercontent.com/argoproj/argo-cd/${ARGOCD_VERSION}/manifests/install.yaml"
+
+# Argo CD upstream manifests set no resource requests. On Autopilot that means
+# the mutator defaults every container to 0.5 vCPU / 2Gi — ~3.5 vCPU / 14Gi for
+# the whole install (~$165/mo, and it forces extra nodes past the SSD quota).
+# Pin small explicit requests instead; `kubectl set resources` owns these fields
+# under its own field manager, so the server-side apply above won't revert them
+# on re-runs. Autopilot minimum is 50m CPU / 52Mi memory.
+if [ "$IS_GKE" -eq 1 ]; then
+  echo "==> trimming Argo CD resource requests (Autopilot defaults are 0.5 vCPU / 2Gi per container)"
+  kubectl -n argocd set resources deploy/argocd-server deploy/argocd-repo-server \
+    --requests=cpu=100m,memory=256Mi
+  kubectl -n argocd set resources \
+    deploy/argocd-applicationset-controller deploy/argocd-dex-server \
+    deploy/argocd-notifications-controller deploy/argocd-redis \
+    --requests=cpu=50m,memory=128Mi
+  kubectl -n argocd set resources statefulset/argocd-application-controller \
+    --requests=cpu=250m,memory=512Mi
+fi
+
 kubectl -n argocd rollout status deploy/argocd-server --timeout=300s
 
 # --- 5. out-of-band Secrets (NOT managed by Argo — see createSecret=false) ---

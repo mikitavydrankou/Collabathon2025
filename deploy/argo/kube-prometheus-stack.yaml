@@ -97,6 +97,22 @@ spec:
                     chat_id: 1055072436
                     parse_mode: HTML
                     send_resolved: true
+        # Explicit requests: on GKE Autopilot, containers without requests are
+        # defaulted to 0.5 vCPU / 2Gi each — expensive for these tiny components.
+        prometheusOperator:
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+        kube-state-metrics:
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
         # Trim components that don't exist / aren't useful on a single-node kind.
         kubeControllerManager:
           enabled: false
