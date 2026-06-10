@@ -1,13 +1,18 @@
 # migrate (alembic upgrade) then seed. Plain Jobs — under `helm --wait` Helm
 # blocks until both complete. initContainers gate on Postgres TCP; the seed Job
 # relies on backoffLimit retries to wait out migrate creating the tables.
-# sync-wave annotations are for later Argo CD GitOps (ignored by Helm).
+# sync-wave annotations are for Argo CD GitOps (ignored by Helm).
+#
+# migrate sits in wave 0 WITH Postgres, not before it: a negative wave makes
+# Argo hold the whole sync until the Job completes, but the Job's wait-db init
+# is waiting for the Postgres that the held-back wave would create — deadlock
+# on a fresh cluster. In-wave ordering is handled by wait-db, same as helm.
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: migrate
   annotations:
-    "argocd.argoproj.io/sync-wave": "-1"
+    "argocd.argoproj.io/sync-wave": "0"
     "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
   ttlSecondsAfterFinished: 600
@@ -21,10 +26,20 @@ spec:
         - name: wait-db
           image: busybox:1.36
           command: ["sh", "-c", "until nc -z {{ .Values.config.DB_HOST }} {{ .Values.config.DB_PORT }}; do echo waiting-for-db; sleep 2; done"]
+          # Explicit requests: GKE Autopilot defaults unset requests to
+          # 0.5 vCPU / 2Gi per container — wasteful for a nc loop / alembic run.
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
       containers:
         - name: migrate
           image: {{ .Values.image.registry }}/collabathon2025-migrate:{{ .Values.image.tag }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          resources: {{- toYaml .Values.defaultResources | nindent 12 }}
           envFrom:
             - configMapRef:
                 name: easyfocus-config
@@ -50,10 +65,18 @@ spec:
         - name: wait-db
           image: busybox:1.36
           command: ["sh", "-c", "until nc -z {{ .Values.config.DB_HOST }} {{ .Values.config.DB_PORT }}; do echo waiting-for-db; sleep 2; done"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
       containers:
         - name: seed
           image: {{ .Values.image.registry }}/collabathon2025-seed:{{ .Values.image.tag }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          resources: {{- toYaml .Values.defaultResources | nindent 12 }}
           envFrom:
             - configMapRef:
                 name: easyfocus-config

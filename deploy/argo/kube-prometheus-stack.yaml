@@ -59,7 +59,11 @@ spec:
               # 256Mi OOMKilled once the Tempo datasource + trace search (bleve)
               # were added alongside Prometheus/Loki. 512Mi holds the 3 datasources.
               memory: 512Mi
+        # Disabled on GKE: saves a pod+PVC on the tight Free Trial quota; the
+        # PrometheusRule alerts still evaluate, they just have nowhere to fire.
+        # Re-enable (true) on kind if Telegram alerts are part of the demo.
         alertmanager:
+          enabled: false
           alertmanagerSpec:
             # Mounts Secret `alertmanager-telegram` (key `token`) at
             # /etc/alertmanager/secrets/alertmanager-telegram/token. The bot token
@@ -113,6 +117,10 @@ spec:
               memory: 64Mi
             limits:
               memory: 128Mi
+        # node-exporter needs hostPath /proc + /sys — Autopilot blocks those, the
+        # DaemonSet would never schedule. Node metrics come from GKE's own agents.
+        nodeExporter:
+          enabled: false
         # Trim components that don't exist / aren't useful on a single-node kind.
         kubeControllerManager:
           enabled: false

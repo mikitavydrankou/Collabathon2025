@@ -1,0 +1,31 @@
+# ComputeClass "frugal": makes Autopilot provision nodes with a 30GB boot disk
+# instead of the built-in 100GB one.
+#
+# Why: the Free Trial quota SSD_TOTAL_GB (250GB, not adjustable) is consumed by
+# node boot disks — two default nodes already eat 200GB and the autoscaler can't
+# add a third. Autopilot's Warden only permits pd-balanced boot disks (counted
+# against the SSD quota), so shrinking the disk is the only lever: 30GB nodes
+# fit ~7 to the quota instead of 2.
+#
+# Wired up as the per-namespace default (cluster-level default is rejected on
+# Autopilot): gitops-up-gke.sh labels the workload namespaces with
+#   cloud.google.com/default-compute-class=frugal
+# GKE then injects the class into NEW pods in those namespaces — restart
+# workloads to migrate them off the old pd-balanced nodes (the autoscaler
+# deletes the emptied nodes, freeing the SSD quota).
+#
+# Note: nodes from a custom ComputeClass are billed per-VM (e2 machines),
+# not per-pod-request. e2 + pd-standard is the cheapest combo.
+apiVersion: cloud.google.com/v1
+kind: ComputeClass
+metadata:
+  name: frugal
+spec:
+  priorities:
+    - machineFamily: e2
+      storage:
+        bootDiskType: pd-balanced
+        bootDiskSize: 30
+  whenUnsatisfiable: ScaleUpAnyway
+  nodePoolAutoCreation:
+    enabled: true

@@ -49,6 +49,18 @@ IS_GKE=0
 if kubectl config current-context | grep -q "gke_"; then
   IS_GKE=1
   echo "==> Running on GKE. Skipping MetalLB and Envoy Gateway (GKE provides its own)."
+  # ComputeClass "frugal": nodes with small pd-standard boot disks, so the
+  # autoscaler isn't blocked by the non-adjustable Free Trial SSD_TOTAL_GB
+  # quota (default Autopilot nodes take 100GB pd-balanced each). Made the
+  # default per-namespace via label — the cluster-level default flag is
+  # rejected on Autopilot.
+  echo "==> ComputeClass frugal (pd-standard boot disks)"
+  kubectl apply -f "$HERE/gke/computeclass.yaml"
+  for ns in default argocd monitoring; do
+    kubectl create namespace "$ns" --dry-run=client -o yaml | kubectl apply -f -
+    kubectl label namespace "$ns" --overwrite \
+      cloud.google.com/default-compute-class=frugal
+  done
 fi
 
 if [ "$IS_GKE" -eq 0 ]; then
