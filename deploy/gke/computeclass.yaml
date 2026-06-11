@@ -22,6 +22,15 @@ metadata:
   name: frugal
 spec:
   priorities:
+    # Spot first: ~70% off the on-demand e2 price (~$0.025/h vs ~$0.082/h for
+    # e2-standard-2 in europe-central2). Google can reclaim a spot node with
+    # 25s notice — pods just reschedule; acceptable for a demo/portfolio
+    # cluster. On-demand fallback keeps the app up if spot capacity dries up.
+    - machineFamily: e2
+      spot: true
+      storage:
+        bootDiskType: pd-balanced
+        bootDiskSize: 30
     - machineFamily: e2
       storage:
         bootDiskType: pd-balanced

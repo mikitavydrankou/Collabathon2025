@@ -112,10 +112,14 @@ if [ "$IS_GKE" -eq 1 ]; then
     --requests=cpu=100m,memory=256Mi,ephemeral-storage=256Mi \
     --limits=ephemeral-storage=256Mi
   kubectl -n argocd set resources \
-    deploy/argocd-applicationset-controller deploy/argocd-dex-server \
+    deploy/argocd-applicationset-controller \
     deploy/argocd-notifications-controller deploy/argocd-redis \
     --requests=cpu=50m,memory=128Mi,ephemeral-storage=128Mi \
     --limits=ephemeral-storage=128Mi
+  # dex is SSO-only and we log in with the admin password. Worse, under the
+  # 128Mi ephemeral limit it gets storage-evicted every few minutes and litters
+  # the namespace with hundreds of Failed pods. Off entirely.
+  kubectl -n argocd scale deploy/argocd-dex-server --replicas=0
   kubectl -n argocd set resources statefulset/argocd-application-controller \
     --requests=cpu=250m,memory=512Mi,ephemeral-storage=256Mi \
     --limits=ephemeral-storage=256Mi
