@@ -38,6 +38,13 @@ spec:
             readOnly: true
           - name: positions
             mountPath: /run/promtail
+        # The monitoring namespace defaults to the frugal ComputeClass, so GKE
+        # injects nodeSelector compute-class=frugal into every new pod. The DS
+        # pod aimed at the one untainted (non-frugal) node can then never
+        # schedule — pin the DS to frugal nodes so desired==ready and the app
+        # turns Healthy. That node only runs kube-system (Cloud Logging covers it).
+        nodeSelector:
+          cloud.google.com/compute-class: frugal
         # The frugal-ComputeClass nodes carry a NoSchedule taint; without this
         # toleration the DaemonSet only targets the single untainted node and
         # collects no logs from the app workloads.
@@ -57,7 +64,9 @@ spec:
             memory: 64Mi
             ephemeral-storage: 256Mi
           limits:
-            memory: 128Mi
+            # 128Mi OOMKilled once promtail tails every pod on a node (it only
+            # reached the app nodes after the frugal-taint toleration).
+            memory: 256Mi
             ephemeral-storage: 256Mi
   destination:
     server: https://kubernetes.default.svc
