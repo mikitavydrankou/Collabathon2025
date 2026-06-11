@@ -48,33 +48,45 @@ as little help as they want.**
 The hackathon monolith was cut into **microservices** and built out into a production-style
 platform: async messaging, Kubernetes with GitOps, full observability, and infrastructure as code.
 
-```
-                              ┌──────────────────────────────┐
-        client ──HTTPS──▶     │   Gateway API edge (L7 LB)    │     TLS, single origin
-                              │   kind: Envoy · GKE: gke-l7   │     path-split routing
-                              └───────────────┬──────────────┘
-                       ┌──────────────────────┼───────────────────────┐
-                       ▼ /                     ▼ /auth /qa /chatbot ... ▼
-                ┌────────────┐          ┌──────────────┐        (nginx app-gateway)
-                │  frontend  │          │   backends   │
-                │  Next.js   │          │  auth · tx   │
-                └────────────┘          │  chatbot·qa  │
-                                        │  + mcp tools │
-                                        └──────┬───────┘
-                   transactions.created        │ produce
-                          Kafka  ◀─────────────┘
-                       (KRaft, 1 broker)
-                         │           │  2 consumer groups
-            ┌────────────┘           └────────────┐
-            ▼                                      ▼
-   ┌──────────────────┐                  ┌──────────────────┐
-   │ embedding-worker │──▶ Chroma (RAG)  │  anomaly-worker  │──▶ Postgres flag
-   └──────────────────┘                  └──────────────────┘
-            ▲ outbox-relay (transactional outbox → Kafka)
-            │
-   ┌──────────────────┐   shared Postgres 17 · Redis (LLM cap + rate-limit)
-   │  all services    │──────────────────────────────────────────────
-   └──────────────────┘
+```mermaid
+flowchart TB
+    client(["🌐 client"]) -- "HTTPS · TLS" --> edge["Gateway API edge — L7 LB
+    kind: Envoy · GKE: gke-l7 · single origin"]
+
+    edge -- "/" --> fe["frontend
+    Next.js"]
+    edge -- "/auth · /transactions · /chatbot · /qa" --> gw["nginx app-gateway
+    rate-limits · path routing"]
+
+    subgraph services["backend services"]
+        direction LR
+        auth["auth-svc"]
+        tx["transactions-svc"]
+        chat["chatbot-svc"]
+        qa["qa-svc"]
+        mcp["mcp — LLM tools"]
+    end
+
+    gw --> services
+    chat -.-> mcp
+    qa -.-> mcp
+
+    tx -- "transactional outbox" --> relay["outbox-relay"]
+    relay -- "transactions.created" --> kafka[["Kafka — KRaft, 1 broker"]]
+
+    subgraph consumers["2 consumer groups"]
+        direction LR
+        embed["embedding-worker"]
+        anomaly["anomaly-worker"]
+    end
+
+    kafka --> embed
+    kafka --> anomaly
+    embed -- "embed for RAG" --> chroma[("Chroma")]
+    anomaly -- "flag anomaly" --> pg
+
+    services --> pg[("PostgreSQL 17")]
+    services -.-> redis[("Redis — LLM cap · rate-limit")]
 ```
 
 - **Services** (own `pyproject.toml` + Dockerfile, share an installable `shared-lib/` via poetry path-dep):
