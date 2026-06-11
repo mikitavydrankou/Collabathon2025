@@ -41,7 +41,10 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
     setError("");
 
     try {
-      // Always login as alex.brown with password123
+      // DEMO ONLY: the hackathon build always signs in as the seeded demo
+      // user (see seed/), so reviewers land in a populated account without
+      // registration. A real build would read the form fields and never ship
+      // hardcoded credentials.
       const credentials = { username: "alex.brown", password: "password123" };
 
       const data = await apiClient.login(credentials);

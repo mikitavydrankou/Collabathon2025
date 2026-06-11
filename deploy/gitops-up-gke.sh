@@ -140,26 +140,43 @@ helm template easyfocus "$CHART" \
   --set createSecret=true -s templates/config.yaml \
   | kubectl apply -n default -f -
 
-# alertmanager-telegram: bot token from env, into the monitoring ns (created here
-# so the secret exists before the kube-prometheus-stack app's Alertmanager starts).
-kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
-if [ -n "${TELEGRAM_BOT_TOKEN:-}" ]; then
-  echo "==> alertmanager-telegram secret"
-  kubectl -n monitoring create secret generic alertmanager-telegram \
-    --from-literal=token="$TELEGRAM_BOT_TOKEN" \
-    --dry-run=client -o yaml | kubectl apply -f -
-else
-  echo "WARN: TELEGRAM_BOT_TOKEN unset — skipping alertmanager-telegram secret." >&2
-  echo "      Alertmanager will not start until it exists; export the token and re-run." >&2
+# The in-cluster observability stack is OFF by default on GKE: it requested
+# ~half the cluster (~1-2 extra nodes) and values-gke.yaml ships with every
+# monitoring.* integration disabled to fit the Free Trial budget. To deploy it:
+#   1. flip the monitoring.* overrides in deploy/helm/easyfocus/values-gke.yaml
+#      back on (and restore OTEL_EXPORTER_OTLP_ENDPOINT),
+#   2. re-run this script with WITH_MONITORING=1.
+WITH_MONITORING="${WITH_MONITORING:-0}"
+MONITORING_APPS=""
+if [ "$WITH_MONITORING" = "1" ]; then
+  MONITORING_APPS="kube-prometheus-stack loki promtail tempo"
+  # alertmanager-telegram: bot token from env, into the monitoring ns (created here
+  # so the secret exists before the kube-prometheus-stack app's Alertmanager starts).
+  kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
+  if [ -n "${TELEGRAM_BOT_TOKEN:-}" ]; then
+    echo "==> alertmanager-telegram secret"
+    kubectl -n monitoring create secret generic alertmanager-telegram \
+      --from-literal=token="$TELEGRAM_BOT_TOKEN" \
+      --dry-run=client -o yaml | kubectl apply -f -
+  else
+    echo "WARN: TELEGRAM_BOT_TOKEN unset — skipping alertmanager-telegram secret." >&2
+    echo "      Alertmanager will not start until it exists; export the token and re-run." >&2
+  fi
 fi
 
-# --- 6. Argo Applications (app + monitoring stack, synced from git) ---
+# --- 6. Argo Applications (synced from git) ---
 echo "==> applying Argo Applications"
-kubectl apply -f "$HERE/argo/"
+kubectl apply -f "$HERE/argo/easyfocus.yaml"
+if [ "$WITH_MONITORING" = "1" ]; then
+  kubectl apply -f "$HERE/argo/kube-prometheus-stack.yaml" -f "$HERE/argo/loki.yaml" \
+    -f "$HERE/argo/promtail.yaml" -f "$HERE/argo/tempo.yaml"
+else
+  echo "    (monitoring stack skipped — WITH_MONITORING=1 to deploy it)"
+fi
 
 # --- 7. wait + access hints ---
 echo "==> waiting for apps to sync (Argo polls git ~every 3m on first run)"
-for app in kube-prometheus-stack loki promtail tempo easyfocus; do
+for app in $MONITORING_APPS easyfocus; do
   echo "  - $app"
   kubectl -n argocd wait --for=jsonpath='{.status.health.status}'=Healthy \
     "application/$app" --timeout=600s || echo "    (still progressing — check Argo UI)"
