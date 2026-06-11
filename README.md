@@ -7,6 +7,10 @@
 Adaptive, conversational banking for neurodivergent and cognitively diverse users —
 chat your way through payments, get step-by-step guidance, catch mistakes before they happen.
 
+[![CI/CD](https://github.com/mikitavydrankou/Collabathon2025/actions/workflows/build-images.yml/badge.svg?branch=next-gen)](https://github.com/mikitavydrankou/Collabathon2025/actions/workflows/build-images.yml)
+[![Live demo](https://img.shields.io/website?url=https%3A%2F%2Feasyfocus.duckdns.org&label=live%20demo&up_message=online&down_message=offline)](https://easyfocus.duckdns.org)
+[![Last commit](https://img.shields.io/github/last-commit/mikitavydrankou/Collabathon2025/next-gen?label=last%20commit)](https://github.com/mikitavydrankou/Collabathon2025/commits/next-gen)
+
 ![Kafka](https://img.shields.io/badge/Kafka-KRaft-231f20?logo=apachekafka&logoColor=white)
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-Helm-326ce5?logo=kubernetes&logoColor=white)
 ![Argo CD](https://img.shields.io/badge/Argo%20CD-GitOps-ef7b4d?logo=argo&logoColor=white)
