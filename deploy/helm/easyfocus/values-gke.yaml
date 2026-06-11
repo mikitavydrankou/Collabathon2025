@@ -21,7 +21,7 @@ image:
   # to the commit SHA on every push and Argo CD rolls the cluster to that exact
   # build. Don't edit by hand (the next push overwrites it); rollback = revert
   # the "ci: deploy" commit.
-  tag: latest
+  tag: e5d852fefc35f06d759768cab719441c7e301f8e
 
 # Cost-cutting: the in-cluster observability stack (kube-prometheus-stack,
 # Loki, Promtail, Tempo) is removed on GKE — it requested ~half the cluster's
