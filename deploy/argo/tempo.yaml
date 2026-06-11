@@ -34,12 +34,14 @@ spec:
           resources:
             requests:
               cpu: 50m
-              memory: 256Mi
+              memory: 512Mi
               ephemeral-storage: 256Mi
             limits:
-              # 512Mi restarted (503) under trace ingest + search; 1Gi is stable
-              # for a single-binary demo Tempo.
-              memory: 1Gi
+              # 512Mi restarted (503) under trace ingest + search; 1Gi survived
+              # ingest but OOMKilled (137) during Grafana trace searches —
+              # Grafana then shows "Client.Timeout exceeded" while the pod
+              # restarts. 1.5Gi holds for demo-scale search.
+              memory: 1536Mi
         persistence:
           enabled: true
           size: 5Gi
