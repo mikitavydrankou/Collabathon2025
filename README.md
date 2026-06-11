@@ -7,14 +7,15 @@
 Adaptive, conversational banking for neurodivergent and cognitively diverse users —
 chat your way through payments, get step-by-step guidance, catch mistakes before they happen.
 
-![Next.js 16](https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
-![Postgres 17](https://img.shields.io/badge/PostgreSQL-17-4169e1?logo=postgresql&logoColor=white)
 ![Kafka](https://img.shields.io/badge/Kafka-KRaft-231f20?logo=apachekafka&logoColor=white)
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-Helm-326ce5?logo=kubernetes&logoColor=white)
 ![Argo CD](https://img.shields.io/badge/Argo%20CD-GitOps-ef7b4d?logo=argo&logoColor=white)
 ![Terraform](https://img.shields.io/badge/Terraform-GKE-7b42bc?logo=terraform&logoColor=white)
 ![Prometheus](https://img.shields.io/badge/Prometheus-Grafana-e6522c?logo=prometheus&logoColor=white)
+
+### 🌐 [**Live demo → easyfocus.duckdns.org**](https://easyfocus.duckdns.org)
+
+<sub>Running on GKE Autopilot · login is automatic (seeded demo account)</sub>
 
 <sub>Team Beszketnyky · Collabathon 2025 for Commerzbank</sub>
 
@@ -86,12 +87,25 @@ Full service map + config reference: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.
 | Concern        | Tooling                                                                       |
 | -------------- | ----------------------------------------------------------------------------- |
 | Orchestration  | **Kubernetes** — one umbrella **Helm** chart (`deploy/helm/easyfocus`)        |
-| GitOps         | **Argo CD** — cluster syncs the app + monitoring straight from this repo      |
+| GitOps         | **Argo CD** — cluster syncs straight from this repo, selfHeal + prune         |
 | Messaging      | **Kafka** (KRaft, single broker) + kafka-ui + kafka-exporter                  |
-| Observability  | **Prometheus + Grafana** (RED dashboard), **Loki** logs, **Tempo** + OTel traces, alerts → Telegram |
-| CI/CD          | **GitHub Actions** — build only changed images, **Trivy** CVE scan, pytest suite |
+| Observability  | **Prometheus + Grafana** (RED dashboard), **Loki** logs, **Tempo** + OTel traces, alerts → Telegram — opt-in on GKE (`WITH_MONITORING=1`) to stay inside the free-tier budget |
+| CI/CD          | **GitHub Actions** — pytest gates the build, all images pushed as `:latest` + `:<sha>`, **Trivy** CVE scan, then CI pins the chart to the SHA and **Argo CD rolls the cluster to exactly that build** |
 | Cloud / IaC    | **Terraform** → **GKE Autopilot**, Artifact Registry, VPC, WIF (keyless CI)   |
 | Edge           | Gateway API — Envoy (kind) / managed L7 LB (GKE), TLS via cert-manager + Let's Encrypt |
+
+**GitOps in action** — Argo CD manages the whole platform from this repo; the easyfocus app alone is 18 tracked workloads:
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/argocd-apps.png" alt="Argo CD — applications, all Healthy and Synced"/><br/><sub>Argo CD — every app Healthy + Synced</sub></td>
+    <td width="50%"><img src="docs/screenshots/argocd-easyfocus-tree.png" alt="Argo CD — easyfocus application, 18 workloads"/><br/><sub>easyfocus app — services, workers, jobs, all green</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/gke-workloads.png" alt="GKE console — 50+ workloads OK on Autopilot"/><br/><sub>Live on GKE Autopilot — 50+ workloads, all OK</sub></td>
+    <td width="50%"><img src="docs/screenshots/pageinfo.png" alt="TLS — verified by Let's Encrypt, TLS 1.3"/><br/><sub>HTTPS end to end — Let's Encrypt via cert-manager, TLS 1.3</sub></td>
+  </tr>
+</table>
 
 ## Quick start
 
@@ -133,8 +147,19 @@ The umbrella chart ships a custom Grafana dashboard (`easyfocus-overview`): RED 
 error ratio, Kafka consumer lag per group, Postgres connections, and a traffic overview — plus Loki
 log correlation and Tempo distributed traces (context propagated through the Kafka outbox).
 
-<!-- Drop a dashboard screenshot at docs/img/grafana-overview.png to render it here: -->
-<!-- ![Grafana — EasyFocus overview](docs/img/grafana-overview.png) -->
+The trace below is one real money transfer crossing **four services**: the HTTP request hits
+`transactions-svc` (SQL + transactional outbox), `outbox-relay` publishes `transactions.created`
+to Kafka, and both consumer groups — `anomaly-worker` and `embedding-worker` — pick it up,
+all stitched into a single trace via context propagation through Kafka message headers:
+
+![Tempo — end-to-end transaction trace across 4 services](docs/screenshots/tempo-transaction-trace.png)
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/grafana-easyfocus-overview.png" alt="Grafana — custom easyfocus-overview dashboard"/><br/><sub>Custom dashboard — request rate, p95 latency, Kafka lag, Postgres</sub></td>
+    <td width="50%"><img src="docs/screenshots/loki-logs.png" alt="Grafana Explore — Loki logs filtered by service"/><br/><sub>Loki — per-service log streams with level detection</sub></td>
+  </tr>
+</table>
 
 ## Stack
 

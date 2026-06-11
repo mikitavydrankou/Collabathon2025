@@ -23,6 +23,10 @@ name: CI/CD
 on:
   push:
     branches: [next-gen, main]
+    # Docs-only pushes don't need 11 image builds + a redeploy.
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
   workflow_dispatch:
 
 env:
