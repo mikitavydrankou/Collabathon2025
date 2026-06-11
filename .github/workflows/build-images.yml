@@ -1,10 +1,24 @@
-name: Build & push images
+name: CI/CD
 
-# Builds service/worker images and pushes to GitHub Container Registry (ghcr.io).
-# Only images whose code changed are rebuilt. shared-lib/ feeds every backend
-# image, so a change there rebuilds all of them; a frontend-only change rebuilds
-# just the frontend. A change to this workflow (or a manual run) rebuilds all.
-# Auth uses the built-in GITHUB_TOKEN — no extra secrets needed.
+# Pipeline: test -> build -> deploy (GitOps).
+#   1. test    — pytest unit suite; nothing builds if it fails.
+#   2. build   — every image is rebuilt and pushed to ghcr.io (+ Artifact
+#                Registry when GCP_PROJECT_ID is configured) tagged :latest and
+#                :<commit-sha>, then Trivy-scanned. All images are built (not
+#                just changed ones) so the :<sha> tag is a complete, coherent
+#                snapshot — the deploy step pins the whole chart to it, and a
+#                partial build would leave some Deployments pointing at a tag
+#                that was never pushed. Layer cache keeps unchanged images cheap.
+#   3. deploy  — pins image.tag in deploy/helm/easyfocus/values-gke.yaml to the
+#                commit SHA and pushes that change back to the branch. Argo CD
+#                watches the repo, sees the diff and rolls the cluster to
+#                exactly this build. Rollback = git revert of the pin commit.
+#                No retrigger loop: pushes made with GITHUB_TOKEN do not start
+#                new workflow runs.
+#
+# Auth: ghcr uses the built-in GITHUB_TOKEN; Artifact Registry is keyless via
+# Workload Identity Federation (repo vars GCP_PROJECT_ID, GCP_WIF_PROVIDER,
+# GCP_DEPLOY_SA; optional GCP_REGION, AR_REPO).
 
 on:
   push:
@@ -14,72 +28,47 @@ on:
 env:
   REGISTRY: ghcr.io
 
+# One pipeline per branch at a time; a queued run supersedes older queued ones.
+concurrency:
+  group: cicd-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  # ---- decide which images to (re)build ----
-  detect:
+  # ---- 1. tests gate everything ----
+  test:
     runs-on: ubuntu-latest
-    outputs:
-      images: ${{ steps.set.outputs.images }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - uses: dorny/paths-filter@v3
-        id: filter
+      - uses: actions/setup-python@v5
         with:
-          filters: |
-            shared: ['shared-lib/**']
-            ci: ['.github/workflows/build-images.yml']
-            frontend: ['frontend/**']
-            auth-svc: ['services/auth-svc/**']
-            transactions-svc: ['services/transactions-svc/**']
-            chatbot-svc: ['services/chatbot-svc/**']
-            qa-svc: ['services/qa-svc/**']
-            embedding-worker: ['workers/embedding-worker/**']
-            anomaly-worker: ['workers/anomaly-worker/**']
-            outbox-relay: ['workers/outbox-relay/**']
-            mcp: ['mcp_server/**']
-            migrate: ['migrate/**']
-            seed: ['seed/**']
+          python-version: "3.12"
 
-      - name: Build matrix of changed images
-        id: set
-        env:
-          FILTERS: ${{ toJSON(steps.filter.outputs) }}
-          EVENT: ${{ github.event_name }}
+      - name: Install test dependencies
         run: |
-          # name = image filter key, shared = depends on shared-lib/
-          CATALOG='[
-            {"image":"collabathon2025-frontend","context":"./frontend","dockerfile":"./frontend/Dockerfile","name":"frontend","shared":false,"build_args":"NEXT_PUBLIC_API_URL="},
-            {"image":"collabathon2025-auth-svc","context":".","dockerfile":"services/auth-svc/Dockerfile","name":"auth-svc","shared":true,"build_args":""},
-            {"image":"collabathon2025-transactions-svc","context":".","dockerfile":"services/transactions-svc/Dockerfile","name":"transactions-svc","shared":true,"build_args":""},
-            {"image":"collabathon2025-chatbot-svc","context":".","dockerfile":"services/chatbot-svc/Dockerfile","name":"chatbot-svc","shared":true,"build_args":""},
-            {"image":"collabathon2025-qa-svc","context":".","dockerfile":"services/qa-svc/Dockerfile","name":"qa-svc","shared":true,"build_args":""},
-            {"image":"collabathon2025-embedding-worker","context":".","dockerfile":"workers/embedding-worker/Dockerfile","name":"embedding-worker","shared":true,"build_args":""},
-            {"image":"collabathon2025-anomaly-worker","context":".","dockerfile":"workers/anomaly-worker/Dockerfile","name":"anomaly-worker","shared":true,"build_args":""},
-            {"image":"collabathon2025-outbox-relay","context":".","dockerfile":"workers/outbox-relay/Dockerfile","name":"outbox-relay","shared":true,"build_args":""},
-            {"image":"collabathon2025-mcp","context":".","dockerfile":"mcp_server/Dockerfile","name":"mcp","shared":true,"build_args":""},
-            {"image":"collabathon2025-migrate","context":".","dockerfile":"migrate/Dockerfile","name":"migrate","shared":true,"build_args":""},
-            {"image":"collabathon2025-seed","context":".","dockerfile":"seed/Dockerfile","name":"seed","shared":true,"build_args":""}
-          ]'
-          if [ "$EVENT" = "workflow_dispatch" ]; then
-            IMAGES=$(echo "$CATALOG" | jq -c '.')
-          else
-            IMAGES=$(echo "$CATALOG" | jq -c --argjson f "$FILTERS" '
-              [ .[] | select(
-                  ($f[.name] == "true")
-                  or (.shared and $f.shared == "true")
-                  or ($f.ci == "true")
-              ) ]')
-          fi
-          echo "images=$IMAGES" >> "$GITHUB_OUTPUT"
-          echo "Rebuilding: $(echo "$IMAGES" | jq -r '[.[].name] | join(", ")')"
+          python -m pip install --upgrade pip
+          pip install \
+            pytest \
+            numpy \
+            sqlalchemy \
+            python-dotenv \
+            "python-jose[cryptography]" \
+            bcrypt \
+            fastapi \
+            psycopg2-binary
 
-  # ---- build only the changed images ----
+      - name: Run tests
+        env:
+          PYTHONPATH: shared-lib
+          JWT_SECRET: test-secret
+          DATABASE_USERNAME: test
+          DATABASE_PASSWORD: test
+          DATABASE_NAME: test
+        run: pytest
+
+  # ---- 2. build & push all images ----
   build:
-    needs: detect
-    if: needs.detect.outputs.images != '[]'
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -88,7 +77,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(needs.detect.outputs.images) }}
+        include:
+          - { image: collabathon2025-frontend,         context: ./frontend, dockerfile: ./frontend/Dockerfile,              build_args: "NEXT_PUBLIC_API_URL=" }
+          - { image: collabathon2025-auth-svc,         context: .,          dockerfile: services/auth-svc/Dockerfile,         build_args: "" }
+          - { image: collabathon2025-transactions-svc, context: .,          dockerfile: services/transactions-svc/Dockerfile, build_args: "" }
+          - { image: collabathon2025-chatbot-svc,      context: .,          dockerfile: services/chatbot-svc/Dockerfile,      build_args: "" }
+          - { image: collabathon2025-qa-svc,           context: .,          dockerfile: services/qa-svc/Dockerfile,           build_args: "" }
+          - { image: collabathon2025-embedding-worker, context: .,          dockerfile: workers/embedding-worker/Dockerfile,  build_args: "" }
+          - { image: collabathon2025-anomaly-worker,   context: .,          dockerfile: workers/anomaly-worker/Dockerfile,    build_args: "" }
+          - { image: collabathon2025-outbox-relay,     context: .,          dockerfile: workers/outbox-relay/Dockerfile,      build_args: "" }
+          - { image: collabathon2025-mcp,              context: .,          dockerfile: mcp_server/Dockerfile,                build_args: "" }
+          - { image: collabathon2025-migrate,          context: .,          dockerfile: migrate/Dockerfile,                   build_args: "" }
+          - { image: collabathon2025-seed,             context: .,          dockerfile: seed/Dockerfile,                      build_args: "" }
 
     steps:
       - name: Checkout
@@ -108,11 +108,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # ---- optional mirror to GCP Artifact Registry ----
-      # Inert until the repo var GCP_PROJECT_ID is set (Settings > Variables).
-      # Auth is keyless via Workload Identity Federation — no JSON key in secrets.
-      # Required repo vars: GCP_PROJECT_ID, GCP_WIF_PROVIDER, GCP_DEPLOY_SA.
-      # Optional (defaults shown): GCP_REGION=europe-central2, AR_REPO=easyfocus.
       - name: Authenticate to GCP
         id: gcpauth
         if: ${{ vars.GCP_PROJECT_ID != '' }}
@@ -179,3 +174,29 @@ jobs:
             --ignore-unfixed \
             --exit-code 0 \
             "${{ env.REGISTRY }}/${{ steps.owner.outputs.name }}/${{ matrix.image }}:${{ github.sha }}"
+
+  # ---- 3. GitOps deploy: pin the chart to this build, Argo does the rest ----
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Pin image.tag to ${{ github.sha }}
+        run: |
+          sed -i "s|^  tag: .*|  tag: ${GITHUB_SHA}|" deploy/helm/easyfocus/values-gke.yaml
+          if git diff --quiet; then
+            echo "values-gke.yaml already at ${GITHUB_SHA} — nothing to deploy"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add deploy/helm/easyfocus/values-gke.yaml
+          git commit -m "ci: deploy ${GITHUB_SHA::7} (pin image.tag for Argo CD)"
+          # tolerate a racing push between checkout and now
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

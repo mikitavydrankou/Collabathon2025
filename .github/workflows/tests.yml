@@ -1,11 +1,13 @@
 name: Tests
 
+# PR-only test run (fast feedback before merge). On pushes to next-gen/main the
+# same suite runs as the `test` job inside build-images.yml, where it gates the
+# image build — keeping it here too would just run everything twice.
+#
 # Runs the pytest unit suite (shared-lib security/usage + transactions anomaly
 # validation). DB-backed tests use in-memory SQLite, so no services are needed.
 
 on:
-  push:
-    branches: [next-gen, main]
   pull_request:
   workflow_dispatch:
 
