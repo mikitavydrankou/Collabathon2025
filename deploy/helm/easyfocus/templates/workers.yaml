@@ -15,6 +15,10 @@ spec:
     metadata:
       labels:
         app: {{ $name }}
+      annotations:
+        # Roll pods when easyfocus-config / easyfocus-secret change — envFrom
+        # values are injected at container start, so updates need a restart.
+        checksum/config: {{ include (print $.Template.BasePath "/config.yaml") $ | sha256sum }}
     spec:
       initContainers:
         - name: wait-kafka

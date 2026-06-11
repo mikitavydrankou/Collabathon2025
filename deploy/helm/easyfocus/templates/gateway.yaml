@@ -1,75 +1,80 @@
+# nginx.conf lives in a named template so the Deployment below can hash the
+# exact rendered config (checksum/config) and roll pods when it changes.
+{{- define "easyfocus.gatewayNginxConf" -}}
+events {}
+
+http {
+    limit_req_zone $binary_remote_addr zone=general:10m rate=20r/s;
+    limit_req_zone $binary_remote_addr zone=ai:10m      rate=20r/m;
+    limit_req_zone $binary_remote_addr zone=write:10m   rate=30r/m;
+    limit_req_status 429;
+
+    server {
+        listen {{ .Values.gateway.port }};
+
+        # k8s cluster DNS for runtime upstream resolution (Services are stable
+        # but variables + resolver avoid boot-time resolution failures).
+        resolver {{ .Values.clusterDNS }} valid=10s ipv6=off;
+        # FQDN required: nginx resolver does not apply resolv.conf search domains.
+        set $auth "auth-svc.{{ .Release.Namespace }}.svc.cluster.local:8000";
+        set $tx   "transactions-svc.{{ .Release.Namespace }}.svc.cluster.local:8000";
+        set $chat "chatbot-svc.{{ .Release.Namespace }}.svc.cluster.local:8000";
+        set $qa   "qa-svc.{{ .Release.Namespace }}.svc.cluster.local:8000";
+
+        limit_req zone=general burst=40 nodelay;
+
+        location = /health {
+            add_header Content-Type application/json;
+            add_header Access-Control-Allow-Origin *;
+            return 200 '{"gateway":"ok"}';
+        }
+
+        location = /status/auth         { proxy_pass http://$auth/health; }
+        location = /status/transactions { proxy_pass http://$tx/health; }
+        location = /status/chatbot      { proxy_pass http://$chat/health; }
+        location = /status/qa           { proxy_pass http://$qa/health; }
+        location = /status/usage        { proxy_pass http://$qa/usage; }
+
+        location = /admin/reset-db {
+            limit_req zone=write burst=5 nodelay;
+            proxy_pass http://$tx/admin/reset-db;
+        }
+
+        location /auth/ { proxy_pass http://$auth; }
+
+        location /chatbot/ {
+            limit_req zone=ai burst=5 nodelay;
+            proxy_pass http://$chat;
+        }
+        location /qa/ {
+            limit_req zone=ai burst=5 nodelay;
+            proxy_pass http://$qa;
+        }
+
+        location = /transactions/create {
+            limit_req zone=write burst=10 nodelay;
+            proxy_pass http://$tx;
+        }
+        location /transactions/ { proxy_pass http://$tx; }
+
+        location /validate_amount      { proxy_pass http://$tx; }
+        location /validate_bank_number { proxy_pass http://$tx; }
+        location /validate_fullname    { proxy_pass http://$tx; }
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+{{- end }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: gateway-nginx
 data:
   nginx.conf: |
-    events {}
-
-    http {
-        limit_req_zone $binary_remote_addr zone=general:10m rate=20r/s;
-        limit_req_zone $binary_remote_addr zone=ai:10m      rate=20r/m;
-        limit_req_zone $binary_remote_addr zone=write:10m   rate=30r/m;
-        limit_req_status 429;
-
-        server {
-            listen {{ .Values.gateway.port }};
-
-            # k8s cluster DNS for runtime upstream resolution (Services are stable
-            # but variables + resolver avoid boot-time resolution failures).
-            resolver {{ .Values.clusterDNS }} valid=10s ipv6=off;
-            # FQDN required: nginx resolver does not apply resolv.conf search domains.
-            set $auth "auth-svc.{{ .Release.Namespace }}.svc.cluster.local:8000";
-            set $tx   "transactions-svc.{{ .Release.Namespace }}.svc.cluster.local:8000";
-            set $chat "chatbot-svc.{{ .Release.Namespace }}.svc.cluster.local:8000";
-            set $qa   "qa-svc.{{ .Release.Namespace }}.svc.cluster.local:8000";
-
-            limit_req zone=general burst=40 nodelay;
-
-            location = /health {
-                add_header Content-Type application/json;
-                add_header Access-Control-Allow-Origin *;
-                return 200 '{"gateway":"ok"}';
-            }
-
-            location = /status/auth         { proxy_pass http://$auth/health; }
-            location = /status/transactions { proxy_pass http://$tx/health; }
-            location = /status/chatbot      { proxy_pass http://$chat/health; }
-            location = /status/qa           { proxy_pass http://$qa/health; }
-            location = /status/usage        { proxy_pass http://$qa/usage; }
-
-            location = /admin/reset-db {
-                limit_req zone=write burst=5 nodelay;
-                proxy_pass http://$tx/admin/reset-db;
-            }
-
-            location /auth/ { proxy_pass http://$auth; }
-
-            location /chatbot/ {
-                limit_req zone=ai burst=5 nodelay;
-                proxy_pass http://$chat;
-            }
-            location /qa/ {
-                limit_req zone=ai burst=5 nodelay;
-                proxy_pass http://$qa;
-            }
-
-            location = /transactions/create {
-                limit_req zone=write burst=10 nodelay;
-                proxy_pass http://$tx;
-            }
-            location /transactions/ { proxy_pass http://$tx; }
-
-            location /validate_amount      { proxy_pass http://$tx; }
-            location /validate_bank_number { proxy_pass http://$tx; }
-            location /validate_fullname    { proxy_pass http://$tx; }
-
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-        }
-    }
+{{ include "easyfocus.gatewayNginxConf" . | indent 4 }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -86,6 +91,10 @@ spec:
     metadata:
       labels:
         app: gateway
+      annotations:
+        # Roll pods when the rendered nginx config changes — ConfigMap updates
+        # alone don't restart pods, leaving nginx on the stale config.
+        checksum/config: {{ include "easyfocus.gatewayNginxConf" . | sha256sum }}
     spec:
       containers:
         - name: gateway

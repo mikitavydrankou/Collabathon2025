@@ -13,6 +13,10 @@ metadata:
   name: migrate
   annotations:
     "argocd.argoproj.io/sync-wave": "0"
+    # Job spec.template is immutable; without Replace Argo tries to patch the
+    # finished Job on any manifest change and the sync fails ("field is
+    # immutable"). Replace deletes + recreates instead.
+    "argocd.argoproj.io/sync-options": "Replace=true"
     "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
   ttlSecondsAfterFinished: 600
@@ -54,6 +58,7 @@ metadata:
   name: seed
   annotations:
     "argocd.argoproj.io/sync-wave": "1"
+    "argocd.argoproj.io/sync-options": "Replace=true"
     "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
   ttlSecondsAfterFinished: 600
