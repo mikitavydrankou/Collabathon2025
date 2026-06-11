@@ -139,6 +139,11 @@ spec:
           enabled: false
         kubeProxy:
           enabled: false
+        # GKE runs kube-dns, not CoreDNS, and Warden forbids creating the
+        # scrape Service in kube-system anyway — the resource stays
+        # permanently missing and the app permanently OutOfSync.
+        coreDns:
+          enabled: false
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring

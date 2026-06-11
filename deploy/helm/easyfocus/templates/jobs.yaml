@@ -13,10 +13,12 @@ metadata:
   name: migrate
   annotations:
     "argocd.argoproj.io/sync-wave": "0"
-    # Job spec.template is immutable; without Replace Argo tries to patch the
-    # finished Job on any manifest change and the sync fails ("field is
-    # immutable"). Replace deletes + recreates instead.
-    "argocd.argoproj.io/sync-options": "Replace=true"
+    # Argo hook, not a tracked resource: ttlSecondsAfterFinished deletes the
+    # finished Job after 10 min, and a tracked-but-deleted Job leaves the app
+    # permanently OutOfSync. As a Sync hook it re-runs on every sync and
+    # BeforeHookCreation recreates it (Jobs are immutable, can't be patched).
+    "argocd.argoproj.io/hook": "Sync"
+    "argocd.argoproj.io/hook-delete-policy": "BeforeHookCreation"
     "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
   ttlSecondsAfterFinished: 600
@@ -58,7 +60,8 @@ metadata:
   name: seed
   annotations:
     "argocd.argoproj.io/sync-wave": "1"
-    "argocd.argoproj.io/sync-options": "Replace=true"
+    "argocd.argoproj.io/hook": "Sync"
+    "argocd.argoproj.io/hook-delete-policy": "BeforeHookCreation"
     "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
   ttlSecondsAfterFinished: 600

@@ -16,7 +16,27 @@ spec:
         # DaemonSet tailing every pod's stdout/stderr and pushing to Loki.
         # Loki runs in the same namespace (monitoring), so the in-cluster DNS
         # name `loki` resolves directly.
+        #
+        # GKE Autopilot (Warden) forbids write-mode hostPath volumes and only
+        # allows hostPath under /var/log/. The chart's default volumes mount
+        # /var/lib/docker/containers and a writable /run/promtail, so both are
+        # replaced: logs come from read-only /var/log/pods (containerd layout)
+        # and the positions file lives in an emptyDir.
+        defaultVolumes:
+          - name: pods
+            hostPath:
+              path: /var/log/pods
+          - name: positions
+            emptyDir: {}
+        defaultVolumeMounts:
+          - name: pods
+            mountPath: /var/log/pods
+            readOnly: true
+          - name: positions
+            mountPath: /run/promtail
         config:
+          positions:
+            filename: /run/promtail/positions.yaml
           clients:
             - url: http://loki:3100/loki/api/v1/push
         resources:
