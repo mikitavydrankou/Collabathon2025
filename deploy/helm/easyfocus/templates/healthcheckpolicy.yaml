@@ -1,0 +1,22 @@
+{{- if hasPrefix "gke-" .Values.edge.className }}
+# GKE-only. The Google LB health-checks every Gateway backend with GET / by
+# default; the gateway nginx only serves the API paths and returns 404 on /,
+# so the LB marks the backend unhealthy and answers /auth|/qa|... with 503
+# ("unconditional drop overload") while the pods are perfectly fine. Point the
+# probe at nginx's real health endpoint instead.
+apiVersion: networking.gke.io/v1
+kind: HealthCheckPolicy
+metadata:
+  name: gateway-hc
+spec:
+  default:
+    config:
+      type: HTTP
+      httpHealthCheck:
+        requestPath: /health
+        port: {{ .Values.gateway.port }}
+  targetRef:
+    group: ""
+    kind: Service
+    name: gateway
+{{- end }}

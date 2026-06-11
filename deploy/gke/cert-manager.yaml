@@ -21,11 +21,32 @@ spec:
       values: |
         crds:
           enabled: true
+        # Leader-election leases default to kube-system, which Autopilot's
+        # Warden makes read-only — controllers then spin on "cannot create
+        # leases" and the webhook CA never gets injected.
+        global:
+          leaderElection:
+            namespace: cert-manager
         # Gateway API HTTP-01 solver (creates a transient HTTPRoute).
         config:
           apiVersion: controller.config.cert-manager.io/v1alpha1
           kind: ControllerConfiguration
           enableGatewayAPI: true
+        # Explicit requests: Autopilot defaults unset requests to
+        # 0.5 vCPU / 2Gi / 1Gi-ephemeral per container — three controllers'
+        # worth of that neither fits the frugal nodes nor the trial budget.
+        resources: &cmres
+          requests:
+            cpu: 25m
+            memory: 64Mi
+            ephemeral-storage: 128Mi
+          limits:
+            memory: 256Mi
+            ephemeral-storage: 128Mi
+        webhook:
+          resources: *cmres
+        cainjector:
+          resources: *cmres
   destination:
     server: https://kubernetes.default.svc
     namespace: cert-manager

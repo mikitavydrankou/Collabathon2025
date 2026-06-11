@@ -5,6 +5,13 @@
 # Only the cloud-specific deltas live here; everything else stays as values.yaml.
 # Fill the two <PLACEHOLDERS> from `terraform output` after `terraform apply`.
 
+# GKE service CIDR puts kube-dns at 10.8.0.10 (kind: 10.96.0.10). The gateway
+# nginx resolver needs the right one or every proxy_pass hangs on DNS while
+# /health (a plain `return 200`) keeps the LB health check green — requests
+# then time out with a HEALTHY backend.
+# Value = `kubectl -n kube-system get svc kube-dns -o jsonpath={.spec.clusterIP}`
+clusterDNS: "10.8.0.10"
+
 # Pull images from Artifact Registry instead of ghcr.
 # Value = `terraform output -raw artifact_registry_host`
 #   <region>-docker.pkg.dev/<project>/easyfocus
