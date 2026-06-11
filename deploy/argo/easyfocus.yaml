@@ -12,6 +12,13 @@ kind: Application
 metadata:
   name: easyfocus
   namespace: argocd
+  annotations:
+    # Argo v3 defaults to ServerSideDiff when ServerSideApply is on. The GKE
+    # Gateway admission chain mutates the object differently under dry-run, so
+    # SSDiff flags the Gateway as permanently OutOfSync (apply "succeeds", the
+    # very next compare drifts again — visible as selfHeal retry loops).
+    # Classic diff on the same state is clean.
+    argocd.argoproj.io/compare-options: ServerSideDiff=false
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
@@ -45,9 +52,26 @@ spec:
       jqPathExpressions:
         - .spec.parentRefs[].group
         - .spec.parentRefs[].kind
+        - .spec.parentRefs[].sectionName
         - .spec.rules[].backendRefs[].group
         - .spec.rules[].backendRefs[].kind
         - .spec.rules[].backendRefs[].weight
+        - .spec.rules[].filters[].requestRedirect.statusCode
+        - .spec.rules[].matches
+    # The GKE Gateway controller writes a dozen networking.gke.io/* status
+    # annotations (incl. last-reconcile-time, which changes on every reconcile)
+    # onto the Gateway — permanent OutOfSync unless ignored wholesale.
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      jqPathExpressions:
+        - .metadata.annotations
+        - .spec.addresses[].type
+        # API server persists certificateRefs[].group as "" but a dry-run apply
+        # omits it — ServerSideDiff-style comparison drifts on it forever.
+        # select(.tls): plain .tls.certificateRefs[] errors on the non-TLS http
+        # listener ("Cannot iterate over null") and Argo then silently drops
+        # the whole expression.
+        - .spec.listeners[] | select(.tls) | .tls.certificateRefs[].group
   syncPolicy:
     automated:
       prune: true

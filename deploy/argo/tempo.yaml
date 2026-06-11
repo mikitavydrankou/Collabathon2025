@@ -47,6 +47,15 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
+  # volumeClaimTemplates are immutable after StatefulSet creation and the live
+  # object was created without storageClassName (GKE default applies anyway) —
+  # the values' `storageClass: standard` can never converge, only drift.
+  ignoreDifferences:
+    - group: apps
+      kind: StatefulSet
+      jqPathExpressions:
+        - .spec.volumeClaimTemplates
+        - .spec.persistentVolumeClaimRetentionPolicy
   syncPolicy:
     automated:
       prune: true
@@ -54,3 +63,4 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      - RespectIgnoreDifferences=true

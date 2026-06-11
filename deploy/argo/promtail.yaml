@@ -13,6 +13,10 @@ spec:
     targetRevision: 6.16.6
     helm:
       values: |
+        # TODO: Promtail is EOL since 2026-03-02 — migrate to Grafana Alloy
+        # (https://grafana.com/docs/loki/latest/setup/migrate/migrate-to-alloy/)
+        # or drop log collection entirely in the cost-cutting pass.
+        #
         # DaemonSet tailing every pod's stdout/stderr and pushing to Loki.
         # Loki runs in the same namespace (monitoring), so the in-cluster DNS
         # name `loki` resolves directly.
@@ -34,6 +38,14 @@ spec:
             readOnly: true
           - name: positions
             mountPath: /run/promtail
+        # The frugal-ComputeClass nodes carry a NoSchedule taint; without this
+        # toleration the DaemonSet only targets the single untainted node and
+        # collects no logs from the app workloads.
+        tolerations:
+          - key: cloud.google.com/compute-class
+            operator: Equal
+            value: frugal
+            effect: NoSchedule
         config:
           positions:
             filename: /run/promtail/positions.yaml
