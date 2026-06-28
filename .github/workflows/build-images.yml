@@ -21,12 +21,10 @@ name: CI/CD
 # GCP_DEPLOY_SA; optional GCP_REGION, AR_REPO).
 
 on:
-  push:
-    branches: [next-gen, main]
-    # Docs-only pushes don't need 11 image builds + a redeploy.
-    paths-ignore:
-      - "**.md"
-      - "docs/**"
+  # The cloud infra (GKE / Artifact Registry / Workload Identity Federation) has
+  # been decommissioned to cut costs, so the build + deploy jobs can no longer
+  # authenticate to GCP and would fail on every push. Auto-runs are disabled;
+  # trigger manually if the cloud setup is ever restored.
   workflow_dispatch:
 
 env:
