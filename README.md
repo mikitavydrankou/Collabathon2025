@@ -8,7 +8,6 @@ Adaptive, conversational banking for neurodivergent and cognitively diverse user
 chat your way through payments, get step-by-step guidance, catch mistakes before they happen.
 
 [![CI/CD](https://github.com/mikitavydrankou/Collabathon2025/actions/workflows/build-images.yml/badge.svg?branch=next-gen)](https://github.com/mikitavydrankou/Collabathon2025/actions/workflows/build-images.yml)
-[![Live demo](https://img.shields.io/website?url=https%3A%2F%2Feasyfocus.duckdns.org&label=live%20demo&up_message=online&down_message=offline)](https://easyfocus.duckdns.org)
 [![Last commit](https://img.shields.io/github/last-commit/mikitavydrankou/Collabathon2025/next-gen?label=last%20commit)](https://github.com/mikitavydrankou/Collabathon2025/commits/next-gen)
 
 ![Kafka](https://img.shields.io/badge/Kafka-KRaft-231f20?logo=apachekafka&logoColor=white)
@@ -17,15 +16,27 @@ chat your way through payments, get step-by-step guidance, catch mistakes before
 ![Terraform](https://img.shields.io/badge/Terraform-GKE-7b42bc?logo=terraform&logoColor=white)
 ![Prometheus](https://img.shields.io/badge/Prometheus-Grafana-e6522c?logo=prometheus&logoColor=white)
 
-### 🌐 [**Live demo → easyfocus.duckdns.org**](https://easyfocus.duckdns.org)
-
-<sub>Running on GKE Autopilot · login is automatic (seeded demo account)</sub>
-
 <sub>Team Beszketnyky · Collabathon 2025 for Commerzbank</sub>
 
 </div>
 
 ---
+
+## Demo
+
+> The hosted demo has been retired to keep cloud costs down — here's a short walkthrough of the running app. ([project showcase →](https://easyfocus.duckdns.org))
+
+<p align="center">
+  <img src="docs/demo.gif" alt="EasyFocus walkthrough — reminders, AI-chat payments, system health and accessibility" width="300" />
+</p>
+
+A familiar mobile-banking app, **rebuilt around accessibility** — an AI assistant on the surface, a real microservices platform underneath. Banking apps overwhelm people who think differently, so EasyFocus **remembers, watches, explains and adapts**, for you. In the clip:
+
+- **Payment reminder** — never miss a bill, no deadlines to keep in your head.
+- **Live system health** — every microservice up and running (a peek under the hood).
+- **Recurring payment spotted** — paid right there through the AI chat.
+- **"Need help?" → AI chat** — ask anything in plain language, like your balance.
+- **Accessibility settings** — adapts to how each person reads and focuses.
 
 ## Why
 
